@@ -39,7 +39,25 @@ The imager will format your microSD card and install selected OS; a message will
 
 
 ### 2. – First access to RPI.
-
+Insert the microSD card and power up the RPI.<br>
+To access the RPI via SSH you need to provide <var>userID</var>, RPI IP address or localhost name and password in a command via terminal that follow this syntax:
 ```bash
-sudo apt update && sudo apt upgrade
+ssh <var>userID</var>@192.168.XXX.XXX
 ```
+You can discover the IP address assigned by router’s DHCP to the RPI by accessing to your router web-admin page or running this command on your Linux client:
+```bash
+ip neigh show
+```
+or running this other command if you have nmap installed, adjusting the sub-net according to your LAN settings:
+```bash
+nmap -sP 192.168.XXX.0/24
+```
+NOTE: following this guide you will set a static IP through the RPI configuration, but is always a good practice to reserve a specific static IP address in router’s configuration: it will link the RPI connected device’s MAC address to the specified LAN IP address. It should be done for all the clients that will use the RPI for a better control over your network. You can also adjust the DHCP range of your router.<br>
+Once access is gained with password set in imager configuration, execute:
+```bash
+sudo raspi-config
+```
+an interactive menu will pop-up, choose “Advanced Settings” (last option on the list) and “Expand File System”.<br>
+You can navigate menu with ARROW keys, TAB key and confirm with ENTER key.<br>
+Exit the menu and the RPI will reboot to expand the file system to the whole microSD card.<br>
+The connection via SSH from your client terminal to the RPI will be terminated, obviously.
