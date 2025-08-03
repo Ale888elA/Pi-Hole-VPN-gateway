@@ -79,22 +79,22 @@ sudo reboot
 ```
 
 ### 4. – Set SSH access to the RPI using a security token.
-Security token implements strong security standards to SSH access to your RPI and along with failtoban and ufw that will be configured later prevent access through brute-force attacks on your RPI SSH port; for this purpose you can also change the default port (22) used for SSH access.<br>
-First you need to generate the security token on your Linux client PC:
+Security key token implements strong security standards to SSH access to your RPI and along with failtoban and ufw that will be configured later prevent access through brute-force attacks on your RPI SSH port; for this purpose you can also change the default port (22) used by SSH protocol.   
+First you need to generate the security key token on your Linux client PC:
 ```bash
 ssh-keygen -t rsa
 ```
-you will be asked to give a name to generated security token;<br>
-both public and private key will be stored in /home/<var>client_userID</var>/.ssh/ directory of your Linux client PC;<br>
-copy the token public key to the RPI, adjusting varibles <var>tokenname</var>, <var>RPI_static_IP</var> and <var>userID</var> according to your settings:
+you will be asked to give a name to generated security key token;   
+both public and private key will be stored in /home/*client_userID*/.ssh/ directory of your Linux client PC;   
+copy the token public key to the RPI, adjusting *tokenname*, *RPI_static_IP* and *>userID* varibles according to your settings:
 ```bash
 scp ~/.ssh/tokenname_rsa.pub userID@RPI_static_IP:/home/userID/
 ```
-now you need to access to the RPI via SSH and create a file that SSH daemon will look for when you’re trying to access the RPI with the security token:
+now you need to access to the RPI via SSH and create a file that SSH daemon will look for when you’re trying to access the RPI with the security key token:
 ```bash
 install -d -m 700 ~/.ssh
 ```
-now you can add the token public key to the created authorized_keys file:
+now you can add the token public key to the created **authorized_keys** file:
 ```bash
 cat /home/userID/tokenname_rsa.pub >> ~/.ssh/authorized_keys
 ```
@@ -103,17 +103,19 @@ and then set the correct permission, user and group to the file:
 sudo chmod 644 ~/.ssh/authorized_keys
 sudo chown userID:userID ~/.ssh/authorized_keys
 ```
-you need to repeat the steps regarding token creation, copy public key to the RPI and add it to authorized_key file procedures from all the PCs and laptops you wish to grant SSH token access to your RPI; you can also remove the public key file:
+you need to repeat the steps regarding key token creation, copy public key to the RPI and add it to authorized_key file procedures from all the PCs and laptops you wish to grant SSH key token access to your RPI;   
+you can also remove the public key file:
 ```bash
 rm /home/userID/tokenname_rsa.pub
 ```
-now you need to edit the SSH configuration file to inhibit access via password:
+after all PCs and laptops keys has been added, you need to edit the SSH configuration file to inhibit access via password:
 ```bash
 sudo nano /etc/ssh/sshd_config
 ```
-look for the line “PasswordAuthentication”, if is commented with (#) symbol uncomment it and set bolean value to “no”. Save file and exit nano editor (CTRL + O, ENTER, CTRL + X).<br>
-After rebooting the RPI you will need the security token to access the RPI via SSH:
+look for the line **PasswordAuthentication**, if is commented with **#** symbol uncomment it and set bolean value to **“no”**.   
+Save file and exit nano editor (CTRL+O, ENTER, CTRL+X).   
+After rebooting the RPI you will need to call the security key token to access the RPI via SSH:
 ```bash
 ssh -i /home/client_userID/.ssh/tokenname_rsa userID@RPI_static_IP
 ```
-SSH security tokens can be also generated from MacOS, Windows and other operating systems, I’ll leave you the pleasure to do a simple internet research to get this knowledge.
+SSH security key tokens can be also generated from MacOS, Windows and other operating systems, I’ll leave you the pleasure to do a simple web search to get this knowledge.
