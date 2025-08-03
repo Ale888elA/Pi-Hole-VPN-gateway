@@ -27,7 +27,7 @@ This guide is suited for the security exigences of a home network and for privat
 Hardware used is a <abbr title="Raspberry PI">RPI</abbr> 4 4Gb RAM with a 64Gb microSD memory card, cable connected to my 5G modem/router <abbr title="Local Area Network">LAN</abbr> port, but it can be set to use Wi-Fi connection instead. It will also works on RPI 3 models. You’ll also need a microSD card reader.
 The operative system installed on the <abbr title="Raspberry PI">RPI</abbr> is Raspberry Pi OS 64bit headless (without desktop environment), based on Linux Debian Bookworm.
 Required additional Linux software packages from APT: unattended-upgrades, bsd-mailx, nftables, ufw, fail2ban, wireguard, qrencode, rclone, ddclient, zip, unzip.
-Required additional software: Pi-Hole.<br>
+Required additional software: Pi-Hole.
 PC used for programming client-side uses Linux OS.
 
 
