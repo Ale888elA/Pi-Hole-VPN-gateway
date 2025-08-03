@@ -42,7 +42,7 @@ The imager will format your microSD card and install selected OS; a message will
 Insert the microSD card and power up the RPI.<br>
 To access the RPI via SSH you need to provide <var>userID</var>, RPI IP address or localhost name and password in a command via terminal that follow this syntax:
 ```bash
-ssh <var>userID</var>@192.168.XXX.XXX
+ssh userID@192.168.XXX.XXX
 ```
 You can discover the IP address assigned by router’s DHCP to the RPI by accessing to your router web-admin page or running this command on your Linux client:
 ```bash
@@ -61,3 +61,59 @@ an interactive menu will pop-up, choose “Advanced Settings” (last option on 
 You can navigate menu with ARROW keys, TAB key and confirm with ENTER key.<br>
 Exit the menu and the RPI will reboot to expand the file system to the whole microSD card.<br>
 The connection via SSH from your client terminal to the RPI will be terminated, obviously.
+
+### 3. – Set a static IP address on the RPI.
+After rebooting, access again the RPI via SSH and update the RPI executing:
+```bash
+sudo apt update && sudo apt upgrade -y
+```
+It will take some time, depending on the amount of the upgrades needed by the system, your internet connection speed and the RPI model performance.<br>
+After upgrade process has finished, execute this command:
+```bash
+sudo nmtui
+```
+from the interactive menu that will show up you will be able to select the connection device you’re using (ethernet or Wi-Fi) and set up a static IP address, gateway and DNS server(s) address(es). If, as suggested, you reserved a static IP address on the router, be sure that the IP address set is the same.<br>
+Reboot the RPI and all configuration changes will take effect:
+```bash
+sudo reboot
+```
+
+### 4. – Set SSH access to the RPI using a security token.
+Security token implements strong security standards to SSH access to your RPI and along with failtoban and ufw that will be configured later prevent access through brute-force attacks on your RPI SSH port; for this purpose you can also change the default port (22) used for SSH access.<br>
+First you need to generate the security token on your Linux client PC:
+```bash
+ssh-keygen -t rsa
+```
+you will be asked to give a name to generated security token;<br>
+both public and private key will be stored in /home/<var>client_userID</var>/.ssh/ directory of your Linux client PC;<br>
+copy the token public key to the RPI, adjusting varibles <var>tokenname</var>, <var>RPI_static_IP</var> and <var>userID</var> according to your settings:
+```bash
+scp ~/.ssh/tokenname_rsa.pub userID@RPI_static_IP:/home/userID/
+```
+now you need to access to the RPI via SSH and create a file that SSH daemon will look for when you’re trying to access the RPI with the security token:
+```bash
+install -d -m 700 ~/.ssh
+```
+now you can add the token public key to the created authorized_keys file:
+```bash
+cat /home/userID/tokenname_rsa.pub >> ~/.ssh/authorized_keys
+```
+and then set the correct permission, user and group to the file:
+```bash
+sudo chmod 644 ~/.ssh/authorized_keys
+sudo chown userID:userID ~/.ssh/authorized_keys
+```
+you need to repeat the steps regarding token creation, copy public key to the RPI and add it to authorized_key file procedures from all the PCs and laptops you wish to grant SSH token access to your RPI; you can also remove the public key file:
+```bash
+rm /home/userID/tokenname_rsa.pub
+```
+now you need to edit the SSH configuration file to inhibit access via password:
+```bash
+sudo nano /etc/ssh/sshd_config
+```
+look for the line “PasswordAuthentication”, if is commented with (#) symbol uncomment it and set bolean value to “no”. Save file and exit nano editor (CTRL + O, ENTER, CTRL + X).<br>
+After rebooting the RPI you will need the security token to access the RPI via SSH:
+```bash
+ssh -i /home/client_userID/.ssh/tokenname_rsa userID@RPI_static_IP
+```
+SSH security tokens can be also generated from MacOS, Windows and other operating systems, I’ll leave you the pleasure to do a simple internet research to get this knowledge.
