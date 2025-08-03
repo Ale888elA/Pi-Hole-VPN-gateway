@@ -24,17 +24,17 @@ This guide is suited for the security exigences of a home network and for privat
 </ul>
 
 ### Specs:
-Hardware used is a <abbr title="Raspberry PI">RPI</abbr> 4 4Gb RAM with a 64Gb microSD memory card, cable connected to my 5G modem/router <abbr title="Local Area Network">LAN</abbr> port, but it can be set to use Wi-Fi connection instead. It will also works on RPI 3 models. You’ll also need a microSD card reader.
-The operative system installed on the <abbr title="Raspberry PI">RPI</abbr> is Raspberry Pi OS 64bit headless (without desktop environment), based on Linux Debian Bookworm.
-Required additional Linux software packages from APT: unattended-upgrades, bsd-mailx, nftables, ufw, fail2ban, wireguard, qrencode, rclone, ddclient, zip, unzip.
-Required additional software: Pi-Hole.
+Hardware used is a <abbr title="Raspberry PI">RPI</abbr> 4 4Gb RAM with a 64Gb microSD memory card, cable connected to my 5G modem/router <abbr title="Local Area Network">LAN</abbr> port, but it can be set to use Wi-Fi connection instead. It will also works on RPI 3 models. You’ll also need a microSD card reader.<br>
+The operative system installed on the <abbr title="Raspberry PI">RPI</abbr> is Raspberry Pi OS 64bit headless (without desktop environment), based on Linux Debian Bookworm.<br>
+Required additional Linux software packages from APT: unattended-upgrades, bsd-mailx, nftables, ufw, fail2ban, wireguard, qrencode, rclone, ddclient, zip, unzip.<br>
+Required additional software: Pi-Hole.<br>
 PC used for programming client-side uses Linux OS.
 
 
 ### 1. – Installing Raspberry Pi OS on a microSD memory card.
-Raspberry Pi Imager software for your preferred OS can be downloaded from Raspberry official website.
-Choose your <abbr title="Raspberry PI">RPI</abbr> model, the desired version of Raspberry Pi OS and the microSD card of destination.
-After clicking NEXT button, edit the configuration and enable <abbr title="Secure Shell">SSH</abbr> service otherwise you will not have access to the <abbr title="Raspberry PI">RPI</abbr> if you have chosen an headless OS; change the default <var>userID</var> (pi), set an access secure password, locales and keyboard configuration; also setup SSID name, access credentials and country in case you want to connect to the <abbr title="Raspberry PI">RPI</abbr> via Wi-Fi.
+<a href="https://www.raspberrypi.com/software/" target="_blank">Raspberry Pi Imager software</a> for your preferred OS can be downloaded from Raspberry official website.<br>
+Choose your <abbr title="Raspberry PI">RPI</abbr> model, the desired version of Raspberry Pi OS and the microSD card of destination.<br>
+After clicking NEXT button, edit the configuration and enable <abbr title="Secure Shell">SSH</abbr> service otherwise you will not have access to the <abbr title="Raspberry PI">RPI</abbr> if you have chosen an headless OS; change the default <var>userID</var> (pi), set an access secure password, locales and keyboard configuration; also setup SSID name, access credentials and country in case you want to connect to the <abbr title="Raspberry PI">RPI</abbr> via Wi-Fi.<br>
 The imager will format your microSD card and install selected OS; a message will pop-up after the procedure is finished, telling to remove the microSD card from the reader.
 
 
