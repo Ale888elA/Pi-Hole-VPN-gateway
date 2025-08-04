@@ -205,3 +205,6 @@ With rules set in ufw and previous configuration of SSH access only with key tok
 For ddclient configuration, you will need some parameters that can be obtained from the control panel of DDNS provider service you subscribed, like protocol used, username, password and third level domain you have chosen.   
 If you have a static public IP you can skip the configuration with CTRL + C.   
 Create a shell file:
+
+<!-- BEGIN install_services.sh -->
+<!-- END install_services.sh -->
