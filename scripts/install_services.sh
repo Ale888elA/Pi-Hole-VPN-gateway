@@ -36,16 +36,40 @@ echo "Creating persistent nftables configuration..."
 NFT_CONF="/etc/nftables.conf"
 
 sudo tee "$NFT_CONF" > /dev/null <<EOF
-#!/usr/sbin/nft -f
+!/usr/sbin/nft -f
 
 flush ruleset
+
+##############################################
+# TABLE: NAT
+##############################################
+
+table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority 0;
+
+        # DNS Hijacking - redirects all DNS traffic toward your local DNS
+        tcp dport 53 dnat to "$PIHOLE_IP"
+        udp dport 53 dnat to "$PIHOLE_IP"
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority 100;
+
+        # NAT for VPN outbound traffic over your connecting device
+        oifname ""$IFACE"" masquerade
+    }
+}
+
+
+##############################################
+# TABLE: FILTER
+##############################################
 
 table inet filter {
     chain input {
         type filter hook input priority 0;
         policy accept;
-        iif "$IFACE" tcp dport 853 reject comment "Blocca DoT"
-        iif "$IFACE" ip daddr { 1.1.1.1, 8.8.8.8, 9.9.9.9 } tcp dport 443 reject comment "Blocca DoH"
     }
 
     chain forward {
@@ -56,21 +80,16 @@ table inet filter {
     chain output {
         type filter hook output priority 0;
         policy accept;
+
+        # Blocks DNS-over-TLS (853 TCP port)
+        tcp dport 853 drop
+
+        # Blocks DNS-over-HTTPS (DoH)
+        ip daddr { 1.1.1.1, 1.0.0.1, 8.8.8.8, 8.8.4.4, 9.9.9.9 } tcp dport 443 drop
+        ip6 daddr { 2606:4700:4700::1111, 2001:4860:4860::8888 } tcp dport 443 drop
     }
 }
 
-table ip nat {
-    chain prerouting {
-        type nat hook prerouting priority 0;
-        tcp dport 53 dnat to $PIHOLE_IP
-        udp dport 53 dnat to $PIHOLE_IP
-    }
-
-    chain postrouting {
-        type nat hook postrouting priority 100;
-        oifname "$IFACE" masquerade
-    }
-}
 EOF
 
 sudo systemctl enable nftables
