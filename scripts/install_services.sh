@@ -136,7 +136,7 @@ cat <<EOF | sudo tee /etc/fail2ban/jail.d/ssh.conf
 enabled = true
 port = ssh
 filter = sshd
-logpath = /var/log/auth.log
+backend = systemd
 maxretry = 5
 EOF
 
