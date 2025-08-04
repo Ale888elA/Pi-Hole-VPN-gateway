@@ -78,7 +78,48 @@ Reboot the RPI and all configuration changes will take effect:
 sudo reboot
 ```
 
-### 4. – Set SSH access to the RPI using a security token.
+### 4. - Configuring unattended-upgrades.
+Unattended-upgrades is a Debian software package that automate the download and install of available updates, including the OS version upgrades when released, reboot the system when is required from the updates and auto clean the system from unused software packages, dependecies  and old kernels;   
+it needs to be installed, configured to match RPI architecture and activated;   
+access the RPI via SSH and execute:
+```bash
+sudo apt install -y unattended-upgrades bsd-mailx
+```
+after the installation process is completed, edit the configuration file:
+```bash
+sudo nano /etc/apt/apt.conf.d/50unattended-upgrades
+```
+look for the file section that starts with
+>Unattended-Upgrade::Origins-Pattern
+and after last line that starts with
+>"origin=Debian,codename=…
+add the two following lines to include RPI architecture to update sources:
+```bash
+"origin=Raspbian,codename=${distro_codename},label=Raspbian";
+"origin=Raspberry Pi Foundation,codename=${distro_codename},label=Raspberry Pi Foundation";
+```
+scroll down to the section
+>//Send mail to this address…
+and set your internal mail address on this line; if is commented with **//** symbols uncomment it otherwise the command will be ignored:
+>Unattended-Upgrade::Mail "userID@localhost";
+set these other lines to match following configuration and uncomment it:
+system will send you and internal mail in case of an update error, will automatically remove unused packages, dependencies and old kernels and reboot the system when is required by the update process:
+>Unattended-Upgrade::MailReport "only-on-error";
+>Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+>Unattended-Upgrade::Remove-New-Unused-Dependencies "true";
+>Unattended-Upgrade::Remove-Unused-Dependencies "true";
+>Unattended-Upgrade::Automatic-Reboot "true";
+save file and exit nano editor;   
+now you need to perform a “dry run” of unattended-upgrades to check that changes in configuration file are set properly:
+```bash
+sudo unattended-upgrades -d -v --dry-run
+```
+and if you’re not getting any error messages you can enable unattended-upgrade process:
+```bash
+sudo dpkg-reconfigure --priority=low unattended-upgrades
+```
+
+### 5. – Set SSH access to the RPI using a security token.
 Security key token implements strong security standards to SSH access to your RPI and along with failtoban and ufw that will be configured later prevent access through brute-force attacks on your RPI SSH port; for this purpose you can also change the default port (22) used by SSH protocol.   
 First you need to generate the security key token on your Linux client PC:
 ```bash
