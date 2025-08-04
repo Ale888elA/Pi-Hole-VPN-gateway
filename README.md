@@ -106,17 +106,17 @@ scroll down to the section
 
 >//Send mail to this address…   
 
-and set your internal mail address on this line; if is commented with **//** symbols uncomment it otherwise the command will be ignored:
+and set your internal mail address on this line; if its commented with **//** symbols uncomment it otherwise the command will be ignored:
 
 >Unattended-Upgrade::Mail "userID@localhost";   
 
 set these other lines to match following configuration and uncomment it:   
 system will send you and internal mail in case of an update error, will automatically remove unused packages, dependencies and old kernels and reboot the system when is required by the update process:
 
->Unattended-Upgrade::MailReport "only-on-error";
->Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
->Unattended-Upgrade::Remove-New-Unused-Dependencies "true";
->Unattended-Upgrade::Remove-Unused-Dependencies "true";
+>Unattended-Upgrade::MailReport "only-on-error";   
+>Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";   
+>Unattended-Upgrade::Remove-New-Unused-Dependencies "true";   
+>Unattended-Upgrade::Remove-Unused-Dependencies "true";   
 >Unattended-Upgrade::Automatic-Reboot "true";
 
 save file and exit nano editor;   
@@ -170,3 +170,27 @@ After rebooting the RPI you will need to call the security key token to access t
 ssh -i /home/client_userID/.ssh/tokenname_rsa userID@RPI_static_IP
 ```
 SSH security key tokens can be also generated from MacOS, Windows and other operating systems, I’ll leave you the pleasure to do a simple web search to get this knowledge.
+
+### 6. – Install Pi Hole.
+The installation process is completely automated and you will be asked only few simple questions to complete the setup and get the Pi Hole working:
+```bash
+curl -sSL https://install.pi-hole.net | bash
+```
+don’t forget to take note of the web-admin page password that will be shown at the end of installation process and to refer to Pi Hole official website for documentation, commands, customization and eventual issues.   
+To be able to operate, Pi Hole needs blocklists and eventually whitelists of domains; a simple web search will be enough to find many.   
+**NOTE:** As YouTube and Twitch serve their ads through their main domains, Pi Hole will NOT be able to block it.   
+Now you can set up two <a href="https://en.wikipedia.org/wiki/Cron" target="_blank">cron</a> jobs to automate the update of the Pi Hole and the Pi Hole blocklists (Gravity):
+```bash
+sudo crontab -e
+```
+if this is your first access to crontab you will be asked to choose an editor from a list;   
+add this two lines that you can customize to fit your preference:   
+the first line sets the blocklists update at 4:00 AM every 3rd day of the week;   
+second line sets Pi Hole update at 5:00 AM every 3rd day of the week;
+```bash
+0 4 * * 3 /bin/bash /home/userID/ya-pihole-list/adlists-updater.sh 1 >/dev/null
+0 5 * * 3 /usr/bin/date >> /var/log/pihole_update.log && /usr/local/bin/pihole -up >> /var/log/pihole>
+```
+save the crontab file and exit editor;   
+now you can reboot the RPI and all changes will take effect;   
+you need to set your network clients to use *RPI_static_IP* as DNS address or you can set it as DNS address directly on your router settings so it will be used network-wide.
