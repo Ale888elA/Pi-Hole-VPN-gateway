@@ -137,7 +137,7 @@ ssh-keygen -t rsa
 ```
 you will be asked to give a name to generated security key token;   
 both public and private key will be stored in /home/*client_userID*/.ssh/ directory of your Linux client PC;   
-copy the token public key to the RPI, adjusting *tokenname*, *RPI_static_IP* and *>userID* varibles according to your settings:
+copy the token public key to the RPI, adjusting *tokenname*, *RPI_static_IP* and *userID* varibles according to your settings:
 ```bash
 scp ~/.ssh/tokenname_rsa.pub userID@RPI_static_IP:/home/userID/
 ```
@@ -200,12 +200,17 @@ This script will provide the installation of necessary software packages and the
 While is quite simple to disable IPv6 traffic through the configuration of the network manager on your PC or laptop, and also many Smart-TV models give the oprion in their network settings, is way more difficult on your smartphone because it will probably require root privileges; setting the RPI as your gateway while your smartphone is connected to the LAN will block all IPv6 traffic.   
 You are installing and configuring nftables instead of iptables because iptables can create conflicts with ufw (firewall) that uses nftables as its base for rule settings.   
 You need to forward the udc port you will use for your VPN server (45678 in this example) from the exterior to your RPI_static_IP in your router configuration; if your router does not have port forward function, it will probably have virtual server function where you can set the same rule.   
-**NOTE:** the VPN you are installing will **NOT** hide your public IP address; it will only encrypt the communications from your device to the destination you're reaching, avoiding third parties to be able to intercept your data. To hide your public IP or de-geolocalize it for purposes like see Netflix content not available in your country, you'll need a commercial VPN subscription; there's a wide variety of offers in the VPN market, but providers that are unanimously considered the best ones privacy wise are swedish <a href="https://mullvad.net" target="_blank">Mullvad</a> and swiss <a href="https://protonvpn.com/" target="_blank">Proton</a> due to the strict privacy laws of coutries they're operating from.   
-With rules set in ufw and previous configuration of SSH access only with key token, SSH port is already protected from brute-force attacks and is also not exposed to WAN direct access, but can be only reached from the LAN or the VPN addresses; fail2ban is installed only for auditing/forensic purposes on failed access logs, but will be useful if you will change ufw settings on SSH port rules.   
+**NOTE:** the VPN you are installing will **NOT** hide your public IP address; it will only encrypt the communications from your device to the destination you're reaching, avoiding third parties to be able to intercept your data. To hide your public IP or de-geolocalize it for purposes like see Netflix content not available in your country, you'll need a commercial VPN subscription, that gives you the chance to connect to servers located in different countries; there's a wide variety of offers in the VPN market, but providers that are unanimously considered the best ones privacy-wise are swedish <a href="https://mullvad.net" target="_blank">Mullvad</a> and swiss <a href="https://protonvpn.com/" target="_blank">Proton</a> due to the strict privacy laws of coutries they're operating from.   
+With rules set in ufw and previous configuration of SSH access only with security key token, SSH port is already protected from brute-force attacks and is also not exposed to WAN direct access, but can be only reached from LAN or VPN addresses; fail2ban is installed only for auditing/forensic purposes on failed access logs, but will be useful if you will change ufw rule settings on SSH port.   
 For ddclient configuration, you will need some parameters that can be obtained from the control panel of DDNS provider service you subscribed, like protocol used, username, password and third level domain you have chosen.   
-If you have a static public IP you can skip the configuration with CTRL + C.   
+If you have a static public IP you can skip the configuration with CTRL+C.   
 Create a shell file:
-
+```bash
+sudo nano install_services.sh
+```
+and copy the following script, adjusting the variables in the beginning to fit your settings:   
+*eht0* is the variable value if your RPI is cable connected, if you're using Wi-Fi connection should be set to *wlan0*;   
+*wg0* is the virtual device that will be created and used for VPN tunneling and *10.8.0.0/24* is the subnet that will be used by the VPN; *10.8.0.1* will be your VPN gateway address; this values are WireGuard defaults;
 <!-- BEGIN install_services.sh -->
 ```bash
 #!/bin/bash
@@ -367,3 +372,104 @@ echo "- Fail2Ban: active"
 echo "- ddclient: configured"
 ```
 <!-- END install_services.sh -->
+save the file and exit the editor;   
+make the file executable:   
+```bash
+sudo chmod +x install_services.sh
+```
+and execute the script to install and configure the services:   
+```bash
+sudo ./install_services.sh
+```
+after the script has finished the services installaion you need to reboot the RPI;   
+after the system restarted and you logged in again, you need to check that installed services are working correctly:   
+check that WireGuard service is active:
+```bash
+sudo wg show
+```
+Check that nftables rules are set properly:
+```bash
+sudo nft list ruleset
+```
+Check IP forwarding for gateway service
+```bash
+cat /proc/sys/net/ipv4/ip_forward
+```
+
+### 8. - Create a watchdog timer to check VPN server and Pi Hole status.
+Watchdog timer is a useful service that regularly checks the operational status of the VPN server and Pi Hole, and restore it in case of failure.   
+You first need to creae a shell file:
+```bash
+sudo nano /usr/local/bin/watchdog.sh
+```
+and copy following code into it:
+<!-- BEGIN watchdog.sh -->
+```bash
+#!/bin/bash
+
+WG_INTERFACE="wg0"
+DNS_CHECK="pi.hole"
+
+# Check WireGuard handshake
+if ! sudo wg show $WG_INTERFACE | grep -q "latest handshake"; then
+    echo "WireGuard inactive. Restart..."
+    systemctl restart wg-quick@$WG_INTERFACE
+fi
+
+# Check Pi-hole DNS
+if ! dig @$DNS_CHECK | grep -q "ANSWER SECTION"; then
+    echo "Pi-hole is non respondig. Restart DNS and Pi-hole..."
+    systemctl restart pihole-FTL
+fi
+```
+<!-- END watchdog.sh -->
+save file and exit nano, then make the file executable:
+```bash
+sudo chmod +x /usr/local/bin/watchdog.sh
+```
+Now you need to create two ini files to allow the watchdog timer to work:
+```bash
+sudo nano /etc/systemd/system/pi-vpn-watchdog.service
+```
+and copy following code into it:
+<!-- BEGIN pi-vpn-watchdog.service -->
+```bash
+[Unit]
+Description=Watchdog for Pi-hole and WireGuard
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/watchdog.sh
+
+[Install]
+WantedBy=multi-user.target
+```
+<!-- END pi-vpn-watchdog.service -->
+save file and exit nano;
+```bash
+sudo nano /etc/systemd/system/pi-vpn-watchdog.timer
+```
+and copy following code into it:
+<!-- BEGIN pi-vpn-watchdog.timer -->
+```bash
+[Unit]
+Description=Execute Watchdog every 2 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+Unit=pi-vpn-watchdog.service
+
+[Install]
+WantedBy=timers.target
+```
+<!-- END pi-vpn-watchdog.timer -->
+save file and exit nano.   
+Now you need to reload daemon and enable the new service so it will be automatically loaded on every RPI boot:
+```bash
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl enable --now pi-vpn-watchdog.timer
+```
+

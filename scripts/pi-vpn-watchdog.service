@@ -1,0 +1,10 @@
+[Unit]
+Description=Watchdog for Pi-hole and WireGuard
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/watchdog.sh
+
+[Install]
+WantedBy=multi-user.target
