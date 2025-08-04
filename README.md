@@ -90,19 +90,19 @@ after the installation process is completed, edit the configuration file:
 sudo nano /etc/apt/apt.conf.d/50unattended-upgrades
 ```
 look for the file section that starts with
->Unattended-Upgrade::Origins-Pattern
+>Unattended-Upgrade::Origins-Pattern   
 and after last line that starts with
->"origin=Debian,codename=…
+>"origin=Debian,codename=…   
 add the two following lines to include RPI architecture to update sources:
 ```bash
 "origin=Raspbian,codename=${distro_codename},label=Raspbian";
 "origin=Raspberry Pi Foundation,codename=${distro_codename},label=Raspberry Pi Foundation";
 ```
 scroll down to the section
->//Send mail to this address…
+>//Send mail to this address…   
 and set your internal mail address on this line; if is commented with **//** symbols uncomment it otherwise the command will be ignored:
->Unattended-Upgrade::Mail "userID@localhost";
-set these other lines to match following configuration and uncomment it:
+>Unattended-Upgrade::Mail "userID@localhost";   
+set these other lines to match following configuration and uncomment it:   
 system will send you and internal mail in case of an update error, will automatically remove unused packages, dependencies and old kernels and reboot the system when is required by the update process:
 >Unattended-Upgrade::MailReport "only-on-error";
 >Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
