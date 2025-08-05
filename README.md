@@ -242,84 +242,83 @@ et.ipv4.ip_forward=1' /etc/sysctl.conf
 sudo sysctl -w net.ipv4.ip_forward=1
 
 # === 3. Install software packages ===
-echo "Installing nftables, wireguard, ufw, fail2ban, ddclient..."
+echo "Installing wireguard, ufw, fail2ban, ddclient..."
 sudo apt update
-sudo apt install -y nftables wireguard ufw fail2ban ddclient qrencode
-
-# === 4. Configure persistent nftables ===
-echo "Creating persistent nftables configuration..."
-
-NFT_CONF="/etc/nftables.conf"
-
-sudo tee "$NFT_CONF" > /dev/null <<EOF
-!/usr/sbin/nft -f
-
-flush ruleset
-
-##############################################
-# TABLE: NAT
-##############################################
-
-table ip nat {
-    chain prerouting {
-        type nat hook prerouting priority 0;
-
-        # DNS Hijacking - redirects all DNS traffic toward your local DNS
-        tcp dport 53 dnat to "$PIHOLE_IP"
-        udp dport 53 dnat to "$PIHOLE_IP"
-    }
-
-    chain postrouting {
-        type nat hook postrouting priority 100;
-
-        # NAT for VPN outbound traffic over your connecting device
-        oifname ""$IFACE"" masquerade
-    }
-}
-
-
-##############################################
-# TABLE: FILTER
-##############################################
-
-table inet filter {
-    chain input {
-        type filter hook input priority 0;
-        policy accept;
-    }
-
-    chain forward {
-        type filter hook forward priority 0;
-        policy accept;
-    }
-
-    chain output {
-        type filter hook output priority 0;
-        policy accept;
-
-        # Blocks DNS-over-TLS (853 TCP port)
-        tcp dport 853 drop
-
-        # Blocks DNS-over-HTTPS (DoH)
-        ip daddr { 1.1.1.1, 1.0.0.1, 8.8.8.8, 8.8.4.4, 9.9.9.9 } tcp dport 443 drop
-        ip6 daddr { 2606:4700:4700::1111, 2001:4860:4860::8888 } tcp dport 443 drop
-    }
-}
-
-EOF
-
-sudo systemctl enable nftables
-sudo systemctl restart nftables
+sudo apt install -y wireguard ufw fail2ban ddclient qrencode
 
 # === 5. Configure ufw ===
 # With this rule set only incoming requests from LAN and VPN are allowed
 # with the exception for port used by VPN and DDNS
-echo "Configuring ufw..."
+echo "Configuring ufw with persitent iptables rules"
+
+sudo mv /etc/ufw/before.rules /etc/ufw/before.rules.bak
+sudo tee /etc/ufw/before.rules > /dev/null <<EOF
+# rules.before
+#
+# UFW before rules (iptables backend)
+
+*nat
+:PREROUTING ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+
+# DNS Hijack – force DNS TCP/UDP traffic towards Pi-hole
+-A PREROUTING -p udp --dport 53 -j DNAT --to-destination "$PIHOLE-IP"
+-A PREROUTING -p tcp --dport 53 -j DNAT --to-destination "$PIHOLE-IP"
+
+# NAT for VPN client (WireGuard)
+-A POSTROUTING -s 10.8.0.0/24 -o "$IFACE" -j MASQUERADE
+
+# NAT for LAN client
+-A POSTROUTING -s 192.168.0.0/16 -o eth0 -j MASQUERADE
+
+COMMIT
+
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+
+# Allow all loopback (lo0) traffic and drop all traffic to 127/8 that doesn't use lo0.
+-A INPUT -i lo -j ACCEPT
+-A INPUT -d 127.0.0.0/8 -j REJECT
+
+# Accept ICMP
+-A INPUT -p icmp -j ACCEPT
+
+# Allow already established connections
+-A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+# Allow SSH
+-A INPUT -p tcp --dport 22 -j ACCEPT
+
+# Allow VPN port (WireGuard UDP)
+-A INPUT -p udp --dport 50888 -j ACCEPT
+
+# Allow traffic from LAN and VPN
+-A INPUT -s 192.168.0.0/16 -j ACCEPT
+-A INPUT -s 10.8.0.0/24 -j ACCEPT
+
+# Default deny incoming
+-A INPUT -j DROP
+
+# Allow forwarding from VPN
+-A FORWARD -s 10.8.0.0/24 -j ACCEPT
+-A FORWARD -d 10.8.0.0/24 -j ACCEPT
+
+# Default deny forwarding
+-A FORWARD -j DROP
+
+COMMIT
+
+EOF
+
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow "$VPN_PORT"/udp
 sudo ufw allow from 192.168.0.0/16
 sudo ufw allow from 10.8.0.0/24
+sudo ufw allow from 192.168.0.0/16 to any port 22 proto tcp
+sudo ufw allow from 192.168.0.0/16 to any port 22 proto tcp
 sudo ufw enable
 
 # === 6. Configure Wireguard server ===
@@ -394,95 +393,117 @@ copy follwing code an paste into the shell file:
 ```bash
 #!/bin/bash
 
-# set active network interface: eth0 for cable connected or wlan0 for Wi-Di connection.
+# Set static IP address of Raspberry Pi
+RPI_IP="RPI_static_IP"
+# Set interface in use: eth0 or wlan0
 IFACE="eth0"
-# set Raspberry Pi static IP address.
-RPI_IP="192.168.xxx.xxx"
+# Set udp port used by VPN and DDNS
+VPN_PORT="45678"
 
 echo "=============================="
-echo " WireGuard VPN Diagnostic Tool"
+echo "     Services diagnosis       "
 echo "=============================="
 
-# 1. WireGuard status
+# 1. WireGuard
 echo -e "
 [1] WireGuard service status:"
-systemctl is-active wg-quick@wg0 && echo "✅ Active" || echo "❌ NOT active"
+systemctl is-active wg-quick@wg0 &>/dev/null && echo "✅ Active" || echo "❌ Inactive"
+
+echo -e "
+[10] Check UDP "$VPN_PORT" port (WireGuard/DDNS):"
+
+# Check if the port is listenig locally
+if sudo ss -uln | grep -q ":"$VPN_PORT""; then
+    echo "✅ UDP "$VPN_PORT" port is listening locally"
+else
+    echo "❌ UDP "$VPN_PORT" port is NOT listening locally"
+fi
+
+# Check if is allowed by firewall (nftables)
+if sudo nft list chain inet filter input | grep -q 'udp dport "$VPN_PORT" accept'; then
+    echo "✅ UDP "$VPN_PORT" port is allowed by firewall"
+else
+    echo "⚠️  No firewall rule for UDP "$VPN_PORT" port find"
+fi
 
 # 2. IP forwarding
 echo -e "
 [2] IP forwarding:"
-IPFWD=$(sysctl -n net.ipv4.ip_forward)
-[[ "$IPFWD" -eq 1 ]] && echo "✅ Active" || echo "❌ NOT active"
+[[ $(sysctl -n net.ipv4.ip_forward) == "1" ]] && echo "✅ Active" || echo "❌ Disabled"
 
-# 3. Regola masquerade su eth0
+# 3. nftables service status
 echo -e "
-[3] Masquerade rule on "$IFACE" in nftables:"
-nft list ruleset | grep -q 'oifname ""$IFACE"" masquerade' && echo "✅ Present" || echo "❌ Missing"
+[1] nftables service status:"
+systemctl is-active nftables &>/dev/null && echo "✅ Active" || echo "❌ Inactive"
 
-# 4. DNS hijack
+# 4. Masquerade over "$IFACE"
 echo -e "
-[4] DNS hijack active (port 53 to "$RPI_IP"):"
-nft list ruleset | grep -q 'dnat to "$RPI_IP"' && echo "✅ Rules present" || echo "⚠️ DNS hijack missing"
-
-# 5. Connected Peers
-echo -e "
-[5] Active VPN clients:"
-ACTIVE_PEERS=$(wg show wg0 endpoints 2>/dev/null | wc -l)
-if [[ "$ACTIVE_PEERS" -eq 0 ]]; then
-    echo "⚠️  No active peer"
+[2] Regola MASQUERADE su "$IFACE":"
+if sudo nft list chain ip nat postrouting | grep -q 'masquerade'; then
+    echo "✅ Present"
 else
-    wg show wg0 | awk '/peer:/{print "
-👤 Peer: " $2} /allowed ips|endpoint|transfer|latest/ {print "   " $0}'
+    echo "❌ Missing"
 fi
 
-# 6. DNS test from server
+# 5. DNS Hijack TCP/UDP port 53
 echo -e "
-[6] DNS resolutin test (google.com):"
-RES=$(dig +short google.com @"$RPI_IP" | head -n 1)
-if [[ -z "$RES" ]]; then
-    echo "❌ No reply from "$RPI_IP""
+[3] DNS Hijack TCP/UDP (porta 53 → "$RPI_IP"):"
+TCP_RULE=$(sudo nft list chain ip nat prerouting | grep 'tcp dport 53' | grep 'dnat to "$RPI_IP"')
+UDP_RULE=$(sudo nft list chain ip nat prerouting | grep 'udp dport 53' | grep 'dnat to "$RPI_IP"')
+
+if [[ -n "$TCP_RULE" && -n "$UDP_RULE" ]]; then
+    echo "✅ TCP/UDP rules present"
 else
-    echo "✅ DNS working: google.com → $RES"
+    echo "❌ Rules missing"
 fi
 
-# 7. Pi-hole status (web Port check)
+# 6. SSH filter from LAN/VPN
 echo -e "
-[7] Pi-hole status:"
-if nc -z 127.0.0.1 80; then
-    echo "✅ Pi-hole web interfce active (port 80)"
+[4] SSH access restricted from LAN/VPN:"
+SSH_RULE=$(sudo nft list chain inet filter input | grep 'tcp dport 22' | grep -E '192.168.|10.8.')
+
+if [[ -n "$SSH_RULE" ]]; then
+    echo "✅ SSH rule present"
 else
-    echo "⚠️  Pi-hole not reachable on port 80"
+    echo "⚠️  No SSH limit rule find"
 fi
 
-# 8. Ping Google from server
+# 7. Chains
 echo -e "
-[8] Internet connection test (ping 8.8.8.8):"
-ping -c 2 -W 2 8.8.8.8 &>/dev/null && echo "✅ Internet reachable" || echo "❌ Internet NOT reachable"
+[5] Chains:"
+sudo nft list ruleset | grep -q 'table ip nat' && echo "✅ NAT" || echo "❌ NAT missing"
+sudo nft list ruleset | grep -q 'table inet filter' && echo "✅ FILTER" || echo "❌ FILTER missing"
 
-# 9. Active interfaces
+# 8. Show interfaces
 echo -e "
-[9] Active NET interfaces:"
-ip -br addr show | grep UP
+[6] Active interfaces:"
+ip -brief addr | grep UP
 
-# 10. UFW status
+# 9. Active VPN clients
 echo -e "
-[UFW - Firewall]"
-if command -v ufw >/dev/null; then
-    sudo ufw status verbose
-else
-    echo "⚠️  UFW NOT installed"
-fi
+[5] Active Peers:"
+wg show | awk '/peer:/{print "
+🔹 Peer: " $2} /allowed ips:|endpoint:|latest handshake:|transfer:/{print "   " $0}'
 
-# 11. Fail2Ban status
+# 10. DNS test
 echo -e "
-[Fail2Ban]"
-if systemctl list-unit-files | grep -q fail2ban; then
-    systemctl is-active --quiet fail2ban && echo "✅ Active" || echo "❌ NOT active"
-    echo "📋 Jail attive:"
-    sudo fail2ban-client status | grep 'Jail list' || echo "⚠️  No active jail or fail2ban not properly configured"
-else
-    echo "⚠️  Fail2Ban NOT installed"
-fi
+[6] DNS test:"
+host google.com 1.1.1.1 &>/dev/null && echo "✅ DNS working" || echo "❌ DNS NOT working"
+
+# 11. Pi-hole Web Interface
+echo -e "
+[7] Pi-hole Web:"
+curl -s --connect-timeout 2 http://127.0.0.1/admin/ > /dev/null && echo "✅ Web active" || echo "❌ NOT reachable"
+
+# 12. Outbound ping test
+echo -e "
+[8] Ping to 8.8.8.8:"
+ping -c 1 -W 2 8.8.8.8 &>/dev/null && echo "✅ Internet OK" || echo "❌ NO outbound access"
+
+# 13. Fail2Ban
+echo -e "
+[10] Fail2Ban:"
+systemctl is-active fail2ban &>/dev/null && echo "✅ Active" || echo "❌ Inactive"
 
 echo -e "
 ✅ Diagnosis completed."

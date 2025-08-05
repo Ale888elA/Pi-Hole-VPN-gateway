@@ -26,84 +26,83 @@ sudo sed -i '/^#net.ipv4.ip_forward=1/c\net.ipv4.ip_forward=1' /etc/sysctl.conf
 sudo sysctl -w net.ipv4.ip_forward=1
 
 # === 3. Install software packages ===
-echo "Installing nftables, wireguard, ufw, fail2ban, ddclient..."
+echo "Installing wireguard, ufw, fail2ban, ddclient..."
 sudo apt update
-sudo apt install -y nftables wireguard ufw fail2ban ddclient qrencode
-
-# === 4. Configure persistent nftables ===
-echo "Creating persistent nftables configuration..."
-
-NFT_CONF="/etc/nftables.conf"
-
-sudo tee "$NFT_CONF" > /dev/null <<EOF
-!/usr/sbin/nft -f
-
-flush ruleset
-
-##############################################
-# TABLE: NAT
-##############################################
-
-table ip nat {
-    chain prerouting {
-        type nat hook prerouting priority 0;
-
-        # DNS Hijacking - redirects all DNS traffic toward your local DNS
-        tcp dport 53 dnat to "$PIHOLE_IP"
-        udp dport 53 dnat to "$PIHOLE_IP"
-    }
-
-    chain postrouting {
-        type nat hook postrouting priority 100;
-
-        # NAT for VPN outbound traffic over your connecting device
-        oifname ""$IFACE"" masquerade
-    }
-}
-
-
-##############################################
-# TABLE: FILTER
-##############################################
-
-table inet filter {
-    chain input {
-        type filter hook input priority 0;
-        policy accept;
-    }
-
-    chain forward {
-        type filter hook forward priority 0;
-        policy accept;
-    }
-
-    chain output {
-        type filter hook output priority 0;
-        policy accept;
-
-        # Blocks DNS-over-TLS (853 TCP port)
-        tcp dport 853 drop
-
-        # Blocks DNS-over-HTTPS (DoH)
-        ip daddr { 1.1.1.1, 1.0.0.1, 8.8.8.8, 8.8.4.4, 9.9.9.9 } tcp dport 443 drop
-        ip6 daddr { 2606:4700:4700::1111, 2001:4860:4860::8888 } tcp dport 443 drop
-    }
-}
-
-EOF
-
-sudo systemctl enable nftables
-sudo systemctl restart nftables
+sudo apt install -y wireguard ufw fail2ban ddclient qrencode
 
 # === 5. Configure ufw ===
 # With this rule set only incoming requests from LAN and VPN are allowed
 # with the exception for port used by VPN and DDNS
-echo "Configuring ufw..."
+echo "Configuring ufw with persitent iptables rules"
+
+sudo mv /etc/ufw/before.rules /etc/ufw/before.rules.bak
+sudo tee /etc/ufw/before.rules > /dev/null <<EOF
+# rules.before
+#
+# UFW before rules (iptables backend)
+
+*nat
+:PREROUTING ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+
+# DNS Hijack – force DNS TCP/UDP traffic towards Pi-hole
+-A PREROUTING -p udp --dport 53 -j DNAT --to-destination "$PIHOLE-IP"
+-A PREROUTING -p tcp --dport 53 -j DNAT --to-destination "$PIHOLE-IP"
+
+# NAT for VPN client (WireGuard)
+-A POSTROUTING -s 10.8.0.0/24 -o "$IFACE" -j MASQUERADE
+
+# NAT for LAN client
+-A POSTROUTING -s 192.168.0.0/16 -o eth0 -j MASQUERADE
+
+COMMIT
+
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+
+# Allow all loopback (lo0) traffic and drop all traffic to 127/8 that doesn't use lo0.
+-A INPUT -i lo -j ACCEPT
+-A INPUT -d 127.0.0.0/8 -j REJECT
+
+# Accept ICMP
+-A INPUT -p icmp -j ACCEPT
+
+# Allow already established connections
+-A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+# Allow SSH
+-A INPUT -p tcp --dport 22 -j ACCEPT
+
+# Allow VPN port (WireGuard UDP)
+-A INPUT -p udp --dport 50888 -j ACCEPT
+
+# Allow traffic from LAN and VPN
+-A INPUT -s 192.168.0.0/16 -j ACCEPT
+-A INPUT -s 10.8.0.0/24 -j ACCEPT
+
+# Default deny incoming
+-A INPUT -j DROP
+
+# Allow forwarding from VPN
+-A FORWARD -s 10.8.0.0/24 -j ACCEPT
+-A FORWARD -d 10.8.0.0/24 -j ACCEPT
+
+# Default deny forwarding
+-A FORWARD -j DROP
+
+COMMIT
+
+EOF
+
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow "$VPN_PORT"/udp
 sudo ufw allow from 192.168.0.0/16
 sudo ufw allow from 10.8.0.0/24
+sudo ufw allow from 192.168.0.0/16 to any port 22 proto tcp
+sudo ufw allow from 192.168.0.0/16 to any port 22 proto tcp
 sudo ufw enable
 
 # === 6. Configure Wireguard server ===
