@@ -30,80 +30,84 @@ echo "Installing wireguard, ufw, fail2ban, ddclient..."
 sudo apt update
 sudo apt install -y wireguard ufw fail2ban ddclient qrencode
 
-# === 5. Configure ufw ===
+# === 5. Configure nftables ===
 # With this rule set only incoming requests from LAN and VPN are allowed
 # with the exception for port used by VPN and DDNS
-echo "Configuring ufw with persitent iptables rules"
+# Also SSH port will be reachable only from LAN/VPN.
+echo "Creating persistent nftables configuration..."
 
-sudo mv /etc/ufw/before.rules /etc/ufw/before.rules.bak
-sudo tee /etc/ufw/before.rules > /dev/null <<EOF
-# rules.before
-#
-# UFW before rules (iptables backend)
+NFT_CONF="/etc/nftables.conf"
 
-*nat
-:PREROUTING ACCEPT [0:0]
-:POSTROUTING ACCEPT [0:0]
+sudo tee "$NFT_CONF" > /dev/null <<EOF
+#!/usr/sbin/nft -f
 
-# DNS Hijack – force DNS TCP/UDP traffic towards Pi-hole
--A PREROUTING -p udp --dport 53 -j DNAT --to-destination "$PIHOLE-IP"
--A PREROUTING -p tcp --dport 53 -j DNAT --to-destination "$PIHOLE-IP"
+flush ruleset
 
-# NAT for VPN client (WireGuard)
--A POSTROUTING -s 10.8.0.0/24 -o "$IFACE" -j MASQUERADE
+table inet filter {
+    chain input {
+        type filter hook input priority 0;
+        policy drop;
 
-# NAT for LAN client
--A POSTROUTING -s 192.168.0.0/16 -o eth0 -j MASQUERADE
+        iif "lo" accept
+        ct state established,related accept
 
-COMMIT
+        # LAN e VPN - accesso completo
+        ip saddr 192.168.0.0/16 accept
+        ip saddr 10.8.0.0/24 accept
 
-*filter
-:INPUT ACCEPT [0:0]
-:FORWARD ACCEPT [0:0]
-:OUTPUT ACCEPT [0:0]
+        # WireGuard (necessario per stabilire la connessione VPN)
+        udp dport 50888 accept
 
-# Allow all loopback (lo0) traffic and drop all traffic to 127/8 that doesn't use lo0.
--A INPUT -i lo -j ACCEPT
--A INPUT -d 127.0.0.0/8 -j REJECT
+        # SSH access only from LAN and VPN
+        ip saddr { 192.168.0.0/16, 10.8.0.0/24 } tcp dport 22 accept
+        tcp dport 22 drop
 
-# Accept ICMP
--A INPUT -p icmp -j ACCEPT
+        # Log e drop finale
+        log prefix "nftables input drop: " flags all counter
+        drop
+    }
 
-# Allow already established connections
--A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+    chain forward {
+        type filter hook forward priority 0;
+        policy drop;
 
-# Allow SSH
--A INPUT -p tcp --dport 22 -j ACCEPT
+        ct state established,related accept
+        ip saddr 10.8.0.0/24 accept
+        ip daddr 10.8.0.0/24 accept
+    }
 
-# Allow VPN port (WireGuard UDP)
--A INPUT -p udp --dport 50888 -j ACCEPT
+    chain output {
+        type filter hook output priority 0;
+        policy accept;
 
-# Allow traffic from LAN and VPN
--A INPUT -s 192.168.0.0/16 -j ACCEPT
--A INPUT -s 10.8.0.0/24 -j ACCEPT
+        # Blocca DNS-over-TLS
+        tcp dport 853 drop
 
-# Default deny incoming
--A INPUT -j DROP
+        # Blocca DNS-over-HTTPS (DoH)
+        ip daddr { 1.1.1.1, 1.0.0.1, 8.8.8.8, 8.8.4.4, 9.9.9.9 } tcp dport 443 drop
+        ip6 daddr { 2606:4700:4700::1111, 2001:4860:4860::8888 } tcp dport 443 drop
+    }
+}
 
-# Allow forwarding from VPN
--A FORWARD -s 10.8.0.0/24 -j ACCEPT
--A FORWARD -d 10.8.0.0/24 -j ACCEPT
+table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority 0;
 
-# Default deny forwarding
--A FORWARD -j DROP
+        # DNS hijack verso il Pi-hole
+        tcp dport 53 dnat to "$PIHOLE_IP"
+        udp dport 53 dnat to "$PIHOLE_IP"
+    }
 
-COMMIT
+    chain postrouting {
+        type nat hook postrouting priority 100;
+        ip saddr 10.8.0.0/24 oifname ""$IFACE"" masquerade
+    }
+}
 
 EOF
 
-sudo ufw default deny incoming
-sudo ufw default allow outgoing
-sudo ufw allow "$VPN_PORT"/udp
-sudo ufw allow from 192.168.0.0/16
-sudo ufw allow from 10.8.0.0/24
-sudo ufw allow from 192.168.0.0/16 to any port 22 proto tcp
-sudo ufw allow from 192.168.0.0/16 to any port 22 proto tcp
-sudo ufw enable
+sudo systemctl enable nftables
+sudo systemctl start nftables
 
 # === 6. Configure Wireguard server ===
 echo "Configuring WireGuard server..."
@@ -150,6 +154,6 @@ sudo dpkg-reconfigure ddclient
 echo "Success!"
 echo "- nftables: NAT, DNS hijack, DoH/DoT block"
 echo "- WireGuard: ready over port $VPN_PORT"
-echo "- UFW: active"
 echo "- Fail2Ban: active"
 echo "- ddclient: configured"
+
