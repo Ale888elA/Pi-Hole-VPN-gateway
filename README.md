@@ -1,5 +1,6 @@
 ## Using a Raspberry Pi as a VPN server, Gateway and DNS sinkhole
-This guide is suited for the security exigences of a home network and for private use; in a business environment, especially if you deal with customer’s sensible data, is strongly advised to use a professional device that uses pfsense firewall software and strong VPN encryption; <a href="https://www.netgate.com/" target="_blank">NetGate</a> for instance offers a wide variety of devices and cloud solutions that fit security exigences and traffic loads from remote working and small business to large offices, corporate business and data centers.
+This guide is suited for the security exigences of a home network and for private use; in a business environment, especially if you deal with customer’s sensible data, is strongly advised to use a professional device that uses pfsense firewall software and strong VPN encryption; <a href="https://www.netgate.com/" target="_blank">NetGate</a> for instance offers a wide variety of physical devices and cloud solutions that fit security exigences and traffic loads from remote working and small business to large offices, corporate business and data centers.
+
 
 ### Main goals:
 <ul>
@@ -7,6 +8,7 @@ This guide is suited for the security exigences of a home network and for privat
         <li>install and configure on the RPI a network-wide <a href="https://en.wikipedia.org/wiki/Domain_Name_System" target="_blank">DNS</a> sinkhole for blocking ads, tracking, scam, malware and phishing known referrals using <a href="https://pi-hole.net/" target="_blank">Pi Hole</a>;</li>
         <li>configure the RPI to be used as gateway, to block <a href="https://en.wikipedia.org/wiki/IPv6" target="_blank">IPv6</a> traffic for security purposes and hijack hard-coded DNS providers on Smart-TVs.</li>
 </ul>
+
 
 ### Secondary goals:
 <ul>
@@ -21,60 +23,63 @@ This guide is suited for the security exigences of a home network and for privat
         <li>implement a script for manual restore from a password protected backup archive file.</li>
 </ul>
 
+
 ### Specs:
-Hardware used is a <abbr title="Raspberry PI">RPI</abbr> 4 4Gb RAM with a 64Gb microSD memory card, cable connected to my 5G modem/router <abbr title="Local Area Network">LAN</abbr> port, but it can be set to use Wi-Fi connection instead. You’ll also need a microSD card reader.   
-The operative system installed on the <abbr title="Raspberry PI">RPI</abbr> is Raspberry Pi OS 64bit headless (without desktop environment), based on Linux <a href="https://www.debian.org/releases/bookworm/" target="_blank">Debian Bookworm</a>.   
+Hardware used is a RPI 4 4Gb RAM with a 64Gb microSD memory card, cable connected to my 5G modem/router LAN port, but it can be set to use Wi-Fi connection instead. You’ll also need a microSD card reader.   
+The operative system installed on the RPI is Raspberry Pi OS 64bit headless (without desktop environment), based on Linux <a href="https://www.debian.org/releases/bookworm/" target="_blank">Debian Bookworm</a>.   
 Required additional Linux software packages from Debian APT: unattended-upgrades, bsd-mailx, nftables, fail2ban, wireguard, qrencode, rclone, ddclient, zip, unzip.   
 Required additional software from external source: Pi-Hole.   
 PC used for programming client-side uses <a href="https://archlinux.org/" target="_blank">Arch Linux</a> OS.
 
 
 ### 1. – Installing Raspberry Pi OS on a microSD memory card.
-<a href="https://www.raspberrypi.com/software/" target="_blank">Raspberry Pi Imager software</a> for your preferred OS can be downloaded from Raspberry official website.<br>
-Choose your <abbr title="Raspberry PI">RPI</abbr> model, the desired version of Raspberry Pi OS and the microSD card of destination.<br>
-After clicking NEXT button, edit the configuration and enable <abbr title="Secure Shell">SSH</abbr> service otherwise you will not have access to the <abbr title="Raspberry PI">RPI</abbr> if you have chosen an headless OS; change the default <var>userID</var> (pi), set an access secure password, locales and keyboard configuration; also setup SSID name, access credentials and country in case you want to connect to the <abbr title="Raspberry PI">RPI</abbr> via Wi-Fi.<br>
+<a href="https://www.raspberrypi.com/software/" target="_blank">Raspberry Pi Imager</a> sofware for your preferred OS can be downloaded from Raspberry official website; for Arch Linux can be installed directly from pacman as is part of extra repository.   
+Choose your RPI model, the desired version of Raspberry Pi OS and the microSD card of destination.   
+After clicking NEXT button, edit the configuration and **enable SSH service** otherwise you will not have access to the RPI if you have chosen an headless OS; change the default *userID* (pi), set an access secure password, locales and keyboard configuration; also setup SSID name, access credentials and country in case you want to connect to the RPI via Wi-Fi.   
 The imager will format your microSD card and install selected OS; a message will pop-up after the procedure is finished, telling to remove the microSD card from the reader.
 
 
 ### 2. – First access to RPI.
-Insert the microSD card and power up the RPI.<br>
-To access the RPI via SSH you need to provide <var>userID</var>, RPI IP address or localhost name and password in a command via terminal that follow this syntax:
+Insert the microSD card and power up the RPI.   
+To access the RPI via SSH you need to provide *userID*, RPI IP address or localhost name and password in a command via terminal that follow this syntax:
 ```bash
 ssh userID@192.168.XXX.XXX
 ```
-You can discover the IP address assigned by router’s DHCP to the RPI by accessing to your router web-admin page or running this command on your Linux client:
+You can discover the IP address assigned by router’s <a href="https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol" target="_blank">DHCP</a> to the RPI by accessing to your router web-admin page or running this command on your Linux client:
 ```bash
 ip neigh show
 ```
-or running this other command if you have nmap installed, adjusting the sub-net according to your LAN settings:
+or running this other command if you have nmap installed:
 ```bash
-nmap -sP 192.168.XXX.0/24
+nmap -sP 192.168.0.0/16
 ```
-NOTE: following this guide you will set a static IP through the RPI configuration, but is always a good practice to reserve a specific static IP address in router’s configuration: it will link the RPI connected device’s MAC address to the specified LAN IP address. It should be done for all the clients that will use the RPI for a better control over your network. You can also adjust the DHCP range of your router.<br>
-Once access is gained with password set in imager configuration, execute:
+NOTE: following this guide you will set a static IP through the RPI configuration, but is always a good practice to reserve a specific static IP address in router’s configuration: it will link the RPI connected device’s <a href="https://en.wikipedia.org/wiki/MAC_address" target="_blank">MAC address</a> to the specified LAN IP address. It should be done for all the clients that will use the RPI for a better control over your network. You can also adjust the DHCP range of your router.   
+Once access is gained with password set in Raspberry Pi Imager configuration, execute:
 ```bash
 sudo raspi-config
 ```
-an interactive menu will pop-up, choose “Advanced Settings” (last option on the list) and “Expand File System”.<br>
-You can navigate menu with ARROW keys, TAB key and confirm with ENTER key.<br>
-Exit the menu and the RPI will reboot to expand the file system to the whole microSD card.<br>
+an interactive menu will pop-up; choose “Advanced Settings” (last option on the list) and then “Expand File System”.   
+You can navigate menu with ARROW keys, TAB key and confirm with ENTER key.   
+Exit the menu and the RPI will reboot to expand the file system to the whole microSD card.   
 The connection via SSH from your client terminal to the RPI will be terminated, obviously.
+
 
 ### 3. – Set a static IP address on the RPI.
 After rebooting, access again the RPI via SSH and update the RPI executing:
 ```bash
 sudo apt update && sudo apt upgrade -y
 ```
-It will take some time, depending on the amount of the upgrades needed by the system, your internet connection speed and the RPI model performance.<br>
+It will take some time, depending on the amount of the upgrades needed by the system and your internet connection speed.   
 After upgrade process has finished, execute this command:
 ```bash
 sudo nmtui
 ```
-from the interactive menu that will show up you will be able to select the connection device you’re using (ethernet or Wi-Fi) and set up a static IP address, gateway and DNS server(s) address(es). If, as suggested, you reserved a static IP address on the router, be sure that the IP address set is the same.<br>
+from the interactive menu that will show up you will be able to select the connection device you’re using (ethernet or Wi-Fi) and set up a static IP address, gateway and DNS server(s) address(es). If, as suggested, you reserved a static IP address on the router, be sure that the IP address set is the same.   
 Reboot the RPI and all configuration changes will take effect:
 ```bash
 sudo reboot
 ```
+
 
 ### 4. - Configuring unattended-upgrades.
 Unattended-upgrades is a Debian software package that automate the download and install of available updates, including the OS version upgrades when released, reboot the system when is required from the updates and auto clean the system from unused software packages, dependecies  and old kernels;   
