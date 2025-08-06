@@ -13,7 +13,7 @@ echo "=============================="
 
 # 1. Show active interfaces
 echo -e "\n[1] Active interfaces:"
-echo -e "NAME           STATUS              IP ADDRESS"
+echo "NAME           STATUS              IP ADDRESS"
 ip -brief addr | grep UP
 
 # 2. IP forwarding
@@ -125,5 +125,5 @@ ping -c 1 -W 2 8.8.8.8 &>/dev/null && echo "✅ Internet OK" || echo "❌ NO out
 echo -e "\n[16] FAIL2BAN:"
 systemctl is-active fail2ban &>/dev/null && echo "✅ Active" || echo "❌ NOT active"
 
-echo -e "\n✅ Diagnostic completed."
+echo -e "\n✅ Diagnosis completed."
 
