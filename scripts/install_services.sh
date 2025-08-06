@@ -3,6 +3,8 @@
 set -e
 
 # === VARIABLES TO MODIFY ===
+# you can check the RPI IP and device name (IFACE) with this command
+# ip -brief addr | grep UP
 PIHOLE_IP="RPI_static_IP"
 IFACE="eth0"
 VPN_PORT="45678"
@@ -26,9 +28,9 @@ sudo sed -i '/^#net.ipv4.ip_forward=1/c\net.ipv4.ip_forward=1' /etc/sysctl.conf
 sudo sysctl -w net.ipv4.ip_forward=1
 
 # === 3. Install software packages ===
-echo "Installing wireguard, ufw, fail2ban, ddclient..."
+echo "Installing wireguard, nftables, fail2ban, ddclient..."
 sudo apt update
-sudo apt install -y wireguard ufw fail2ban ddclient qrencode
+sudo apt install -y wireguard nftables fail2ban ddclient qrencode
 
 # === 5. Configure nftables ===
 # With this rule set only incoming requests from LAN and VPN are allowed
@@ -51,18 +53,18 @@ table inet filter {
         iif "lo" accept
         ct state established,related accept
 
-        # LAN e VPN - accesso completo
+        # LAN and VPN - full access
         ip saddr 192.168.0.0/16 accept
         ip saddr 10.8.0.0/24 accept
 
-        # WireGuard (necessario per stabilire la connessione VPN)
-        udp dport 50888 accept
+        # WireGuard port (VPN access)
+        udp dport $VPN_PORT accept
 
         # SSH access only from LAN and VPN
         ip saddr { 192.168.0.0/16, 10.8.0.0/24 } tcp dport 22 accept
         tcp dport 22 drop
 
-        # Log e drop finale
+        # Log and final drop
         log prefix "nftables input drop: " flags all counter
         drop
     }
@@ -74,16 +76,17 @@ table inet filter {
         ct state established,related accept
         ip saddr 10.8.0.0/24 accept
         ip daddr 10.8.0.0/24 accept
+        ip saddr 192.168.0.0/16 oifname "$IFACE" accept
     }
 
     chain output {
         type filter hook output priority 0;
         policy accept;
 
-        # Blocca DNS-over-TLS
+        # Block DNS-over-TLS
         tcp dport 853 drop
 
-        # Blocca DNS-over-HTTPS (DoH)
+        # Block DNS-over-HTTPS
         ip daddr { 1.1.1.1, 1.0.0.1, 8.8.8.8, 8.8.4.4, 9.9.9.9 } tcp dport 443 drop
         ip6 daddr { 2606:4700:4700::1111, 2001:4860:4860::8888 } tcp dport 443 drop
     }
@@ -93,18 +96,20 @@ table ip nat {
     chain prerouting {
         type nat hook prerouting priority 0;
 
-        # DNS hijack verso il Pi-hole
-        tcp dport 53 dnat to "$PIHOLE_IP"
-        udp dport 53 dnat to "$PIHOLE_IP"
+        # DNS hijack toward Pi-hole
+        tcp dport 53 dnat to $PIHOLE_IP
+        udp dport 53 dnat to $PIHOLE_IP
     }
 
     chain postrouting {
         type nat hook postrouting priority 100;
-        ip saddr 10.8.0.0/24 oifname ""$IFACE"" masquerade
+
+        ip saddr 10.8.0.0/24 oifname "$IFACE" masquerade
+        ip saddr 192.168.0.0/16 oifname "$IFACE" masquerade
     }
 }
-
 EOF
+
 
 sudo systemctl enable nftables
 sudo systemctl start nftables
@@ -146,13 +151,18 @@ EOF
 sudo systemctl restart fail2ban
 
 # === 8. Configure ddclient ===
+# If your internet connection has a static IP address you can cmment next four script lines
+# and last line, with # symbol at beginning of the lines;
+# you can also uninstall ddclient: sudo apt --purge remove -y ddclient
 echo "Configuring ddclient"
 echo "Press Ctrl+C for skip, or wait to configure."
-sleep 5
+sleep 10
 sudo dpkg-reconfigure ddclient
 
 echo "Success!"
-echo "- nftables: NAT, DNS hijack, DoH/DoT block"
+echo "- IPv6 traffic blocked"
+echo "- IP forwarding enabled"
+echo "- nftables: NAT, DNS hijack, DoH/DoT and firewall rules applied"
 echo "- WireGuard: ready over port $VPN_PORT"
 echo "- Fail2Ban: active"
 echo "- ddclient: configured"

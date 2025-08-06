@@ -14,12 +14,10 @@ This guide is suited for the security exigences of a home network and for privat
         <li>configure the <abbr title="Raspberry PI">RPI</abbr> to refuse <a href="https://en.wikipedia.org/wiki/Secure_Shell" target="_blank"><abbr title="Secure Shell">SSH</abbr></a> password access and use instead a security key token;</li>
         <li>setup <a href="https://en.wikipedia.org/wiki/Network_address_translation" target="_blank"><abbr title="Network Address Translation">NAT</abbr></a> and firewall rules for security purposes and preventing <a href="https://en.wikipedia.org/wiki/DNS_over_TLS" target="_blank"><abbr title="DNS over TLS">DoT</abbr></a> and <a href="https://en.wikipedia.org/wiki/DNS_over_HTTPS" target="_blank"><abbr title="DNS over HTTPS">DoH</abbr></a> queries;</li>
         <li>configure a <a href="https://en.wikipedia.org/wiki/Dynamic_DNS" target="_blank"><abbr title="Dynamic DNS">DDNS</abbr></a> service to access the <abbr title="Virtual Private Network">VPN</abbr> server through the dynamic public IP address given by your <a href="https://en.wikipedia.org/wiki/Internet_service_provider" target="_blank"><abbr title="Internet Service Provider">ISP</abbr></a> from smartphones and laptops while are not connected to the <a href="https://en.wikipedia.org/wiki/Local_area_network" target="_blank"><abbr title="Local Area Network">LAN</abbr></a>;</li>        
-        <li>implement a <a href="https://en.wikipedia.org/wiki/Watchdog_timer" target="_blank">watchdog timer</a> that regularly checks the <abbr title="Virtual Private Network">VPN</abbr> server status;</li>
-        <li>automate the creation of a password protected backup archive of <abbr title="Raspberry PI">RPI</abbr> configuration and the upload on Google Drive or other cloud storage services;</li>
-        <li>implement a script to automate the creation of new <abbr title="Virtual Private Network">VPN</abbr> clients assigning an unused <abbr title="Virtual Private Network">VPN</abbr> IP address and creating a configuration QR code for smartphones;</li>
-        <li>implement a script to automate the purge of <abbr title="Virtual Private Network">VPN</abbr> created clients and their keys;</li>
-        <li>implement a daemon service that flushes <abbr title="Network Address Translation">NAT</abbr> rules on <abbr title="Raspberry PI">RPI</abbr> boot;</li>
-        <li>implement a script for manual diagnosis of the <abbr title="Raspberry PI">RPI</abbr>;</li>
+        <li>implement a diagnostic script that checks services intalled on <abbr title="Raspberry PI">RPI</abbr> are working propely;</li>
+        <li>implement a <a href="https://en.wikipedia.org/wiki/Watchdog_timer" target="_blank">watchdog timer</a> that regularly checks <abbr title="Virtual Private Network">VPN</abbr> server status;</li>
+        <li>implement a script to automate the creation and purge of <abbr title="Virtual Private Network">VPN</abbr> clients and their relative access keys and creates a configuration QR code for smartphones;</li>
+        <li>automate the creation of a password protected backup archive of <abbr title="Raspberry PI">RPI</abbr> configuration and its upload on Google Drive or other cloud storage services;</li>
         <li>implement a script for manual restore from a password protected backup archive file.</li>
 </ul>
 
@@ -195,14 +193,18 @@ save the crontab file and exit editor;
 now you can reboot the RPI and all changes will take effect;   
 you need to set your network clients to use *RPI_static_IP* as DNS address or you can set it as DNS address directly on your router settings so it will be used network-wide.
 
-### 7. – Install and configure Wireguard VPN, gateway, DDNS and security rules.
-This script will provide the installation of necessary software packages and the configuration of various services like Wireguard VPN server, inhibits IPv6 traffic for security purposes, sets nftables rules to use the RPI as gateway and hijack hard-coded DNS providers in Smart-TV, sets firewall and failtoban rules and configures ddclient to access your VPN server while your smartphones or laptops are not connected to the LAN if your ISP gives you a dynamic IP address.   
-While is quite simple to disable IPv6 traffic through the configuration of the network manager on your PC or laptop, and also many Smart-TV models give the oprion in their network settings, is way more difficult on your smartphone because it will probably require root privileges; setting the RPI as your gateway while your smartphone is connected to the LAN will block all IPv6 traffic.   
-You need to forward the udc port you will use for your VPN server (45678 in this example) from the exterior to your RPI_static_IP in your router configuration; if your router does not have port forward function, it will probably have virtual server function where you can set the same rule.   
+### 7. – Install and configure NAT and firewall rules, gateway, Wireguard VPN, and DDNS.
+This script will provide the installation of necessary software packages and the configuration of various services like Wireguard VPN server, disable IPv6 traffic for security purposes, sets nftables rules to use the RPI as gateway and hijack hard-coded DNS providers in Smart-TV, sets firewall and failtoban rules and configures ddclient to access your VPN server while your smartphones or laptops are not connected to the LAN if your ISP gives you a dynamic IP address.   
+While is quite simple to disable IPv6 traffic through the configuration of the network manager on your PC or laptop, and also many Smart-TV models give the oprion in their network settings, is way more difficult on your smartphone because it will probably require root privileges; setting the RPI as your gateway while your smartphone is connected to the LAN or VPN will block all IPv6 traffic.   
+You need to forward the udc port you will use for your VPN server (45678 in this example) from the exterior to your RPI_static_IP in your router configuration; if your router does not have port forwarding function, it will probably have virtual server function where you can set the same rule.   
 **NOTE:** the VPN you are installing will **NOT** hide your public IP address; it will only encrypt the communications from your device to the destination you're reaching, avoiding third parties to be able to intercept your data. To hide your public IP or de-geolocalize it for purposes like see Netflix content not available in your country, you'll need a commercial VPN subscription, that gives you the chance to connect to servers located in different countries; there's a wide variety of offers in the VPN market, but providers that are unanimously considered the best ones privacy-wise are swedish <a href="https://mullvad.net" target="_blank">Mullvad</a> and swiss <a href="https://protonvpn.com/" target="_blank">Proton</a> due to the strict privacy laws of coutries they're operating from.   
 With rules set in nftables and previous configuration of SSH access only with security key token, SSH port is already protected from brute-force attacks and is also not exposed to WAN direct access, but can be only reached from LAN or VPN addresses; fail2ban is installed only for auditing/forensic purposes on failed access logs, but will be useful if you will change rule settings on SSH port.   
 For ddclient configuration, you will need some parameters that can be obtained from the control panel of DDNS provider service you subscribed, like protocol used, username, password and third level domain you have chosen.   
-If you have a static public IP you can skip the configuration with CTRL+C.   
+If you have a static public IP you can skip ddclient configuration with CTRL+C.   
+You can check your IP address and active interface name executing this command on the RPI:
+```bash
+ip -brief addr
+```
 Create a shell file:
 ```bash
 sudo nano install_services.sh
@@ -217,6 +219,8 @@ and copy the following script, adjusting the variables in the beginning to fit y
 set -e
 
 # === VARIABLES TO MODIFY ===
+# you can check the RPI IP and device name (IFACE) with this command
+# ip -brief addr | grep UP
 PIHOLE_IP="RPI_static_IP"
 IFACE="eth0"
 VPN_PORT="45678"
@@ -240,9 +244,9 @@ sudo sed -i '/^#net.ipv4.ip_forward=1/c\net.ipv4.ip_forward=1' /etc/sysctl.conf
 sudo sysctl -w net.ipv4.ip_forward=1
 
 # === 3. Install software packages ===
-echo "Installing wireguard, ufw, fail2ban, ddclient..."
+echo "Installing wireguard, nftables, fail2ban, ddclient..."
 sudo apt update
-sudo apt install -y wireguard ufw fail2ban ddclient qrencode
+sudo apt install -y wireguard nftables fail2ban ddclient qrencode
 
 # === 5. Configure nftables ===
 # With this rule set only incoming requests from LAN and VPN are allowed
@@ -265,18 +269,18 @@ table inet filter {
         iif "lo" accept
         ct state established,related accept
 
-        # LAN e VPN - accesso completo
+        # LAN and VPN - full access
         ip saddr 192.168.0.0/16 accept
         ip saddr 10.8.0.0/24 accept
 
-        # WireGuard (necessario per stabilire la connessione VPN)
-        udp dport 50888 accept
+        # WireGuard port (VPN access)
+        udp dport $VPN_PORT accept
 
         # SSH access only from LAN and VPN
         ip saddr { 192.168.0.0/16, 10.8.0.0/24 } tcp dport 22 accept
         tcp dport 22 drop
 
-        # Log e drop finale
+        # Log and final drop
         log prefix "nftables input drop: " flags all counter
         drop
     }
@@ -288,16 +292,17 @@ table inet filter {
         ct state established,related accept
         ip saddr 10.8.0.0/24 accept
         ip daddr 10.8.0.0/24 accept
+        ip saddr 192.168.0.0/16 oifname "$IFACE" accept
     }
 
     chain output {
         type filter hook output priority 0;
         policy accept;
 
-        # Blocca DNS-over-TLS
+        # Block DNS-over-TLS
         tcp dport 853 drop
 
-        # Blocca DNS-over-HTTPS (DoH)
+        # Block DNS-over-HTTPS
         ip daddr { 1.1.1.1, 1.0.0.1, 8.8.8.8, 8.8.4.4, 9.9.9.9 } tcp dport 443 drop
         ip6 daddr { 2606:4700:4700::1111, 2001:4860:4860::8888 } tcp dport 443 drop
     }
@@ -307,18 +312,20 @@ table ip nat {
     chain prerouting {
         type nat hook prerouting priority 0;
 
-        # DNS hijack verso il Pi-hole
-        tcp dport 53 dnat to "$PIHOLE_IP"
-        udp dport 53 dnat to "$PIHOLE_IP"
+        # DNS hijack toward Pi-hole
+        tcp dport 53 dnat to $PIHOLE_IP
+        udp dport 53 dnat to $PIHOLE_IP
     }
 
     chain postrouting {
         type nat hook postrouting priority 100;
-        ip saddr 10.8.0.0/24 oifname ""$IFACE"" masquerade
+
+        ip saddr 10.8.0.0/24 oifname "$IFACE" masquerade
+        ip saddr 192.168.0.0/16 oifname "$IFACE" masquerade
     }
 }
-
 EOF
+
 
 sudo systemctl enable nftables
 sudo systemctl start nftables
@@ -360,13 +367,18 @@ EOF
 sudo systemctl restart fail2ban
 
 # === 8. Configure ddclient ===
+# If your internet connection has a static IP address you can cmment next four script lines
+# and last line, with # symbol at beginning of the lines;
+# you can also uninstall ddclient: sudo apt --purge remove -y ddclient
 echo "Configuring ddclient"
 echo "Press Ctrl+C for skip, or wait to configure."
-sleep 5
+sleep 10
 sudo dpkg-reconfigure ddclient
 
 echo "Success!"
-echo "- nftables: NAT, DNS hijack, DoH/DoT block"
+echo "- IPv6 traffic blocked"
+echo "- IP forwarding enabled"
+echo "- nftables: NAT, DNS hijack, DoH/DoT and firewall rules applied"
 echo "- WireGuard: ready over port $VPN_PORT"
 echo "- Fail2Ban: active"
 echo "- ddclient: configured"
@@ -384,14 +396,15 @@ sudo ./install_services.sh
 ```
 after the script has finished services installaion you need to reboot the RPI.
 
-### 8. - Implement a manual diagnosis script for installed services and rules.
+### 8. - Implement a manual diagnostic script to check installed services and rules.
 This script, when launched, will check that services you installed are working properly.   
+change variables in the beginnig of file according to your settings;   
 First you need to create a shell file:
 ```bash
-sudo nano /usr/local/bin/diagnosis.sh
+sudo nano /usr/local/bin/diagnostic.sh
 ```
 copy follwing code an paste into the shell file:
-<!-- BEGIN diagnosis.sh -->
+<!-- BEGIN diagnostic.sh -->
 ```bash
 #!/bin/bash
 
@@ -403,106 +416,134 @@ IFACE="eth0"
 VPN_PORT="45678"
 
 echo "=============================="
-echo "     Services diagnosis       "
+echo "= 🔍  Services diagnostic    ="
 echo "=============================="
 
-# 1. WireGuard
-echo -e "\n[1] WireGuard service status:"
-systemctl is-active wg-quick@wg0 &>/dev/null && echo "✅ Active" || echo "❌ Inactive"
-
-echo -e "\n[10] Check UDP "$VPN_PORT" port (WireGuard/DDNS):"
-
-# Check if the port is listenig locally
-if sudo ss -uln | grep -q ":"$VPN_PORT""; then
-    echo "✅ UDP "$VPN_PORT" port is listening locally"
-else
-    echo "❌ UDP "$VPN_PORT" port is NOT listening locally"
-fi
-
-# Check if is allowed by firewall (nftables)
-if sudo nft list chain inet filter input | grep -q 'udp dport "$VPN_PORT" accept'; then
-    echo "✅ UDP "$VPN_PORT" port is allowed by firewall"
-else
-    echo "⚠️  No firewall rule for UDP "$VPN_PORT" port find"
-fi
+# 1. Show active interfaces
+echo -e "\n[1] Active interfaces:"
+echo -e "NAME           STATUS              IP ADDRESS"
+ip -brief addr | grep UP
 
 # 2. IP forwarding
 echo -e "\n[2] IP forwarding:"
-[[ $(sysctl -n net.ipv4.ip_forward) == "1" ]] && echo "✅ Active" || echo "❌ Disabled"
+[[ $(sysctl -n net.ipv4.ip_forward) == "1" ]] && echo "✅ Active" || echo "❌ NOT active"
 
-# 3. nftables service status
-echo -e "\n[1] nftables service status:"
-systemctl is-active nftables &>/dev/null && echo "✅ Active" || echo "❌ Inactive"
+# 3. NFTABLES service status
+echo -e "\n[3] NFTABLES service status:"
+systemctl is-active nftables &>/dev/null && echo "✅ Active" || echo "❌ NOT active"
 
-# 4. Masquerade over "$IFACE"
-echo -e "\n[2] Regola MASQUERADE su "$IFACE":"
-if sudo nft list chain ip nat postrouting | grep -q 'masquerade'; then
-    echo "✅ Present"
+# 4. Existence of expected rooting chains
+echo -e "\n[4] Rooting chains:"
+sudo nft list ruleset | grep -q 'table ip nat' && echo "✅ NAT" || echo "❌ NAT missing"
+sudo nft list ruleset | grep -q 'table inet filter' && echo "✅ FILTER" || echo "❌ FILTER missing"
+
+# 5. LAN routing
+echo -e "\n[5] LAN traffic routing (192.168.0.0/16) enabled:"
+if sudo nft list chain inet filter forward | grep -q 'ip saddr 192.168.0.0/16'; then
+    echo "✅ LAN routing enabled"
 else
-    echo "❌ Missing"
+    echo "❌ Rule missing: LAN traffic blocked (LAN clients will not have internet access)"
 fi
 
-# 5. DNS Hijack TCP/UDP port 53
-echo -e "\n[3] DNS Hijack TCP/UDP (porta 53 → "$RPI_IP"):"
-TCP_RULE=$(sudo nft list chain ip nat prerouting | grep 'tcp dport 53' | grep 'dnat to "$RPI_IP"')
-UDP_RULE=$(sudo nft list chain ip nat prerouting | grep 'udp dport 53' | grep 'dnat to "$RPI_IP"')
+# 6. VPN routing
+echo -e "\n[6] VPN traffic routing (10.8.0.0/24) enabled:"
+if sudo nft list chain inet filter forward | grep -q 'ip saddr 10.8.0.0/24'; then
+    echo "✅ VPN routing enabled"
+else
+    echo "❌ Rule missing: VPN traffic blocked (VPN clients will not have internet access)"
+fi
+
+# 7. DNS Hijack TCP/UDP port 53
+echo -e "\n[7] DNS Hijack TCP/UDP (port 53 → $RPI_IP):"
+TCP_RULE=$(sudo nft list chain ip nat prerouting | grep 'tcp dport 53' | grep "dnat to $RPI_IP")
+UDP_RULE=$(sudo nft list chain ip nat prerouting | grep 'udp dport 53' | grep "dnat to $RPI_IP")
 
 if [[ -n "$TCP_RULE" && -n "$UDP_RULE" ]]; then
-    echo "✅ TCP/UDP rules present"
+    echo "✅ Rules TCP/UDP present"
 else
     echo "❌ Rules missing"
 fi
 
-# 6. SSH filter from LAN/VPN
-echo -e "\n[4] SSH access restricted from LAN/VPN:"
+# 8. SSH filtering rule from LAN/VPN
+echo -e "\n[8] SSH access only from LAN/VPN:"
 SSH_RULE=$(sudo nft list chain inet filter input | grep 'tcp dport 22' | grep -E '192\.168\.|10\.8\.')
 
 if [[ -n "$SSH_RULE" ]]; then
     echo "✅ SSH rule present"
 else
-    echo "⚠️  No SSH limit rule find"
+    echo "⚠️ No SSH filtering rule found"
 fi
 
-# 7. Chains
-echo -e "\n[5] Chains:"
-sudo nft list ruleset | grep -q 'table ip nat' && echo "✅ NAT" || echo "❌ NAT missing"
-sudo nft list ruleset | grep -q 'table inet filter' && echo "✅ FILTER" || echo "❌ FILTER missing"
+# 9. MASQUERADE on eth0/wlan0
+echo -e "\n[9] MASQUERADE rules on $IFACE:"
 
-# 8. Show interfaces
-echo -e "\n[6] Active interfaces:"
-ip -brief addr | grep UP
+VPN_RULE_OK=$(sudo nft list chain ip nat postrouting | grep -q 'ip saddr 10.8.0.0/24 .* masquerade' && echo "ok")
+LAN_RULE_OK=$(sudo nft list chain ip nat postrouting | grep -q 'ip saddr 192.168.0.0/16 .* masquerade' && echo "ok")
 
-# 9. Active VPN clients
-echo -e "\n[5] Active Peers:"
+if [[ "$VPN_RULE_OK" == "ok" ]]; then
+    echo "✅ VPN (10.8.0.0/24) → MASQUERADE on $IFACE: present"
+else
+    echo "❌ VPN (10.8.0.0/24) → MASQUERADE on $IFACE: missing"
+fi
+
+if [[ "$LAN_RULE_OK" == "ok" ]]; then
+    echo "✅ LAN (192.168.0.0/16) → MASQUERADE on $IFACE: present"
+else
+    echo "❌ LAN (192.168.0.0/16) → MASQUERADE on $IFACE: missing"
+fi
+
+# 10. WIREGUARD
+echo -e "\n[10] WIREGUARD service status:"
+systemctl is-active wg-quick@wg0 &>/dev/null && echo "✅ Active" || echo "❌ NOT active"
+
+# 11. Wireguard/DDNS udp port check
+echo -e "\n[11] Check UDP $VPN_PORT port (WireGuard/DDNS):"
+
+# Check if the port is listenig locally
+if sudo ss -uln | grep -q ":$VPN_PORT"; then
+    echo "✅ UDP $VPN_PORT port is listening locally"
+else
+    echo "❌ UDP $VPN_PORT port is NOT listening locally"
+fi
+
+# Check if iTs allowed by firewall rules (nftables)
+if sudo nft list chain inet filter input | grep -q "udp dport $VPN_PORT accept"; then
+    echo "✅ UDP $VPN_PORT port is allowed by firewall"
+else
+    echo "⚠️ No firewall rule for UDP $VPN_PORT port find"
+fi
+
+# 12. Active VPN clients
+echo -e "\n[12] Active Wireguard peers:"
 wg show | awk '/peer:/{print "\n🔹 Peer: " $2} /allowed ips:|endpoint:|latest handshake:|transfer:/{print "   " $0}'
 
-# 10. DNS test
-echo -e "\n[6] DNS test:"
+# 13. DNS test
+echo -e "\n[13] DNS test:"
 host google.com 1.1.1.1 &>/dev/null && echo "✅ DNS working" || echo "❌ DNS NOT working"
 
-# 11. Pi-hole Web Interface
-echo -e "\n[7] Pi-hole Web:"
+# 14. PI HOLE Web Interface
+echo -e "\n[14] PI HOLE Web:"
 curl -s --connect-timeout 2 http://127.0.0.1/admin/ > /dev/null && echo "✅ Web active" || echo "❌ NOT reachable"
 
-# 12. Outbound ping test
-echo -e "\n[8] Ping to 8.8.8.8:"
+# 15. Outbound ping test
+echo -e "\n[15] Ping to 8.8.8.8:"
 ping -c 1 -W 2 8.8.8.8 &>/dev/null && echo "✅ Internet OK" || echo "❌ NO outbound access"
 
-# 13. Fail2Ban
-echo -e "\n[10] Fail2Ban:"
-systemctl is-active fail2ban &>/dev/null && echo "✅ Active" || echo "❌ Inactive"
+# 16. FAIL2BAN
+echo -e "\n[16] FAIL2BAN:"
+systemctl is-active fail2ban &>/dev/null && echo "✅ Active" || echo "❌ NOT active"
 
-echo -e "\n✅ Diagnosis completed."
+echo -e "\n✅ Diagnostic completed."
+
 ```
-<!-- END diagnosis.sh -->
-change variables in the beginnig of file according to your settings;   
+<!-- END diagnostic.sh -->
 save file, exit nano editor and make shell file executable:
 ```bash
-sudo chmod +x /usr/local/bin/diagnosis.sh
+sudo chmod +x /usr/local/bin/diagnostic.sh
 ```
-you can launch the diagnosis scrip with:
+you can launch the diagnostic scrip with:
 ```bash
-sudo diagnosis.sh
+sudo diagnostic.sh
 ```
 
 ### 9. - Create a watchdog timer to check VPN server and Pi Hole status.
