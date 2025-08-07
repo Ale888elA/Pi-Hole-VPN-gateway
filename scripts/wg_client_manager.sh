@@ -7,8 +7,8 @@ KEY_DIR="$WG_DIR/keys"
 CLIENT_DIR="$WG_DIR/clients"
 VPN_SUBNET="10.8.0"
 #
-# 1 - If your internet connection has a static public IP address
-#     set it as ENDPOINT
+# 1 - If your internet connection has a static public IP address and the VPN UDP port
+#     is forwarded by router settings, set as ENDPOINT your static public IP address;
 #
 # 2 - If your internet connection is NOT under CGNAT,
 #     if is under NAT2 but your ISP allowed the forward of VPN UDP port
@@ -16,8 +16,12 @@ VPN_SUBNET="10.8.0"
 #     set as endpoint your third level domain obtained from your DDNS service
 #     (e.g.: mario.myddns.com)
 #
-# 3 - In any other case, set as ENDPOINT the static IP address of the RPI
-#     the client will access the VPN only when connectet to LAN
+# 3 - if you have configured a VPN on a VPS that forwards traffic to the the RPI as its client,
+#     you should set as ENDPOINT the VPS static public IP address or domain;
+#
+# 4 - Otherwise, set as ENDPOINT the static IP address of the RPI
+#     it will work ONLY when clients are connectet to LAN
+#
 ENDPOINT="your.thirdlevel.domain"
 SERVER_PORT="51234"
 # Set as DNS IP address the static IP address of RPI;
