@@ -210,9 +210,9 @@ You can check your IP address and active interface name executing this command o
 ```bash
 ip -brief addr
 ```
-From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/blob/main/scripts/install_services.sh" target="_blank">install_services.sh</a> script to your home directory: 
+From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/install_services.sh" target="_blank">install_services.sh</a> script to your home directory: 
 ```bash
-wget https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/raw/main/scripts/install_services.sh
+wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/install_services.sh
 ```
 edit the script with nano:
 ```bash
@@ -236,9 +236,9 @@ after the script has finished services installaion you need to reboot the RPI.
 ISP implements security features on the internet line you purchase and most common are CGNAT and double NAT or NAT2, that are used mainly when you have a dynamic public IP address.    
 With those features configured on your internet line you will be unable to access the RPI from the WAN and consequentially you will be also unable to use your Wireguard VPN when you're not connected to LAN.    
 The following shell script will help you to check your internet line and know if you are under CGNAT or NAT2;    
-From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/blob/main/scripts/cgnat_check.sh" target="_blank">cgnat_check.sh</a> script to your home directory: 
+From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/cgnat_check.sh" target="_blank">cgnat_check.sh</a> script to your home directory: 
 ```bash
-wget https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/raw/main/scripts/cgnat_check.sh
+wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/cgnat_check.sh
 ```
 make the script executable:
 ```bash
@@ -268,10 +268,10 @@ You need to set the variables at the beginnig of the script according to your se
         <li>if you have configured a VPN on VPS that forwards traffic to the the RPI as its client, you should set as ENDPOINT the **VPS static public IP address or domain**;</li>
         <li>otherwise set as ENDPOINT the **RPI_static_IP**, it will work ONLY when clients are connected to LAN.</li>
 </ul>   
-From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/blob/main/scripts/wg_client_manager.sh" target="_blank">wg_client_manager.sh</a> script to your home directory:   
+From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/wg_client_manager.sh" target="_blank">wg_client_manager.sh</a> script to your home directory:   
 
 ```bash
-wget https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/raw/main/scripts/wg_client_manager.sh
+wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/wg_client_manager.sh
 ```
 open the script with nano and change the variables in the beginning of the file to match your settings:
 ```bash
@@ -294,9 +294,9 @@ to activate the tunnel you can use a lightweight and very straightforward GUI ca
 ### 10. - Implement a manual diagnostic script to check installed services and rules.
 This script, when launched, will check that services you installed are working properly.   
 change variables in the beginnig of file according to your settings;   
-From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/blob/main/scripts/diagnostic.sh" target="_blank">diagnostic.sh</a> script to your home directory: 
+From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/diagnostic.sh" target="_blank">diagnostic.sh</a> script to your home directory: 
 ```bash
-wget https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/raw/main/scripts/diagnostic.sh
+wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/diagnostic.sh
 ```
 open the script with nano and change the variables in the beginning of the file to match your settings:
 ```bash
@@ -316,11 +316,11 @@ sudo diagnostic.sh
 
 ### 11. - Create a watchdog timer to check VPN server and Pi Hole status.
 Watchdog timer is a useful service that regularly checks the operational status of the VPN server and Pi Hole, and restore it in case of failure.   
-From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/blob/main/scripts/diagnostic.sh" target="_blank">watchdog.sh</a> script, <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/blob/main/scripts/pi-vpn-watchdog.service" target="_blank">pi-vpn-watchdog.service</a> and <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/blob/main/scripts/pi-vpn-watchdog.timer" target="_blank">pi-vpn-watchdog.timer</a> to your home directory: 
+From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/diagnostic.sh" target="_blank">watchdog.sh</a> script, <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/pi-vpn-watchdog.service" target="_blank">pi-vpn-watchdog.service</a> and <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/pi-vpn-watchdog.timer" target="_blank">pi-vpn-watchdog.timer</a> to your home directory: 
 ```bash
-wget https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/raw/main/scripts/watchdog.sh
-wget https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/raw/main/scripts/pi-vpn-watchdog.service
-wget https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/raw/main/scripts/pi-vpn-watchdog.timer
+wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/watchdog.sh
+wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/pi-vpn-watchdog.service
+wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/pi-vpn-watchdog.timer
 ```   
 make the script watchdog.sh executable and move it to the appropriate directory:
 ```bash
