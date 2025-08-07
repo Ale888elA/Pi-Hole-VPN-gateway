@@ -261,10 +261,10 @@ Following shell script will act as client manager giving you the options to:
         <li>create a new VPN peer looking for first available VPN address, generate access keys and configuration file, display a configuration QR code that can be red from smartphones and tablets using official Wireguard app for Android or iOS;</li>
         <li>delete an existing peer, access keys and configuration file, typing its name from a displayed list of configured peers.</li>
 </ul>
-You need to set the variables at the beginnig of the script according to your settings;     
-if your internet line has a static public IP address and the VPN UDP port is forwarded by router settings, set as ENDPOINT your static public IP address;     
-if your internet line has a dynamic public IP address but its NOT under CGNAT, your ISP allowed VPN UDP port forwarding if its under NAT2, the VPN UDP port is forwarded by router settings and you configured ddclient, you should set as ENDPOINT the third level domain you got from your DDNS service;     
-otherwise set as ENDPOINT the RPI_static_IP, at least it will work when clients are connected to LAN.    
+You need to set the variables at the beginnig of the script according to your settings;<br>     
+if your internet line has a static public IP address and the VPN UDP port is forwarded by router settings, set as ENDPOINT your static public IP address;<br>     
+if your internet line has a dynamic public IP address but its NOT under CGNAT, your ISP allowed VPN UDP port forwarding if its under NAT2, the VPN UDP port is forwarded by router settings and you configured ddclient, you should set as ENDPOINT the third level domain you got from your DDNS service;<br>     
+otherwise set as ENDPOINT the RPI_static_IP, at least it will work when clients are connected to LAN.<br>    
 From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/blob/main/scripts/wg_client_manager.sh" target="_blank">wg_client_manager.sh</a> script to your home directory:   
 
 ```bash
