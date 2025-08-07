@@ -210,7 +210,7 @@ You can check your IP address and active interface name executing this command o
 ```bash
 ip -brief addr
 ```
-From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/raw/main/scripts/install_services.sh" target="_blank">install_services.sh</a> script to your home directory: 
+From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/blob/main/scripts/install_services.sh" target="_blank">install_services.sh</a> script to your home directory: 
 ```bash
 wget https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/raw/main/scripts/install_services.sh
 ```
@@ -236,51 +236,10 @@ after the script has finished services installaion you need to reboot the RPI.
 ISP implements security features on the internet line you purchase and most common are CGNAT and double NAT or NAT2, that are used mainly when you have a dynamic public IP address.   
 With those features configured on your internet line you will be unable to access the RPI from the WAN and consequentially you will be also unable to use your Wireguard VPN when you're not connected to LAN.  
 The following shell script will help you to check your internet line and know if you are under CGNAT or NAT2;   
-first you need to create a shell file:
+From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/blob/main/scripts/cgnat_check.sh" target="_blank">cgnat_check.sh</a> script to your home directory: 
 ```bash
-nano cgnat_check.sh
+wget https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/raw/main/scripts/cgnat_check.sh
 ```
-copy following script and paste it into nano editor:
-<!-- BEGIN cgnat_check.sh -->
-```bash
-#!/bin/bash
-
-# Needs root privileges
-[[ $EUID -ne 0 ]] && echo "⚠️ You need root privileges (sudo) to run this script" && exit 1
-
-IP_PUB=$(curl -s https://ifconfig.me)
-IP_LOC=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -vE '^127\.|^169\.254\.')
-IP_WAN=$(ip route get 1.1.1.1 | grep -oP 'src \K[\d.]+')
-
-echo "=================================================="
-echo "            🌐 Check CGNAT Active"
-echo "=================================================="
-echo -e "\n🌐 Public IP (visible online): $IP_PUB"
-echo "🏠 Local IP (Raspberry):         $IP_LOC"
-echo "🔌 WAN IP (from router):         $IP_WAN"
-
-# Check if public IP matches WAN IP
-if [[ "$IP_PUB" != "$IP_WAN" ]]; then
-    echo -e "\n❗ Your public IP is different from WAN IP → CGNAT possible"
-else
-    echo -e "\n✅ Your public IP match with WAN IP → Probably you are NOT under CGNAT"
-fi
-
-# Check if WAN IP is in CGNAT range or private
-check_range() {
-    IP="$1"
-    if [[ $IP =~ ^192\.168\. ]] || [[ $IP =~ ^10\. ]] || [[ $IP =~ ^172\.(1[6-9]|2[0-9]|3[0-1])\. ]]; then
-        echo "🔒 WAN IP is in a LAN private range → Probably NAT2"
-    elif [[ $IP =~ ^100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\. ]]; then
-        echo "🔒 WAN IP is in CGNAT range (100.64.0.0/10) → CGNAT ACTIVE"
-    fi
-}
-check_range "$IP_WAN"
-
-echo -e "\n✅ Check complete."
-
-```
-<!-- END cgnat_check.sh -->
 make the script executable:
 ```bash
 chmod +x cgnat_check.sh
@@ -311,152 +270,28 @@ otherwise set as ENDPOINT the RPI_static_IP, at least it will work when clients 
 ### 9. - Implement a manual diagnostic script to check installed services and rules.
 This script, when launched, will check that services you installed are working properly.   
 change variables in the beginnig of file according to your settings;   
-First you need to create a shell file:
+From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/blob/main/scripts/diagnostic.sh" target="_blank">diagnostic.sh</a> script to your home directory: 
 ```bash
-sudo nano /usr/local/bin/diagnostic.sh
+wget https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/raw/main/scripts/diagnostic.sh
 ```
-copy follwing code an paste into the shell file:
-<!-- BEGIN diagnostic.sh -->
+open the script with nano and change the variables in the beginning of the file to match your settings:
 ```bash
-#!/bin/bash
-
-# Set static IP address of Raspberry Pi
-RPI_IP="RPI_static_IP"
-# Set interface in use: eth0 or wlan0
-IFACE="eth0"
-# Set udp port used by VPN and DDNS
-VPN_PORT="51234"
-
-echo "=============================="
-echo "= 🔍  Services diagnosis     ="
-echo "=============================="
-
-# 1. Show active interfaces
-echo -e "\n[1] Active interfaces:"
-echo "NAME           STATUS              IP ADDRESS"
-ip -brief addr | grep UP
-
-# 2. IP forwarding
-echo -e "\n[2] IP forwarding:"
-[[ $(sysctl -n net.ipv4.ip_forward) == "1" ]] && echo "✅ Active" || echo "❌ NOT active"
-
-# 3. NFTABLES service status
-echo -e "\n[3] NFTABLES service status:"
-systemctl is-active nftables &>/dev/null && echo "✅ Active" || echo "❌ NOT active"
-
-# 4. Presence of expected rooting chains
-echo -e "\n[4] Rooting chains:"
-sudo nft list ruleset | grep -q 'table ip nat' && echo "✅ NAT" || echo "❌ NAT missing"
-sudo nft list ruleset | grep -q 'table inet filter' && echo "✅ FILTER" || echo "❌ FILTER missing"
-
-# 5. LAN routing
-echo -e "\n[5] LAN traffic routing (192.168.0.0/16) enabled:"
-if sudo nft list chain inet filter forward | grep -q 'ip saddr 192.168.0.0/16'; then
-    echo "✅ LAN routing enabled"
-else
-    echo "❌ Rule missing: LAN traffic blocked (LAN clients will not have internet access)"
-fi
-
-# 6. VPN routing
-echo -e "\n[6] VPN traffic routing (10.8.0.0/24) enabled:"
-if sudo nft list chain inet filter forward | grep -q 'ip saddr 10.8.0.0/24'; then
-    echo "✅ VPN routing enabled"
-else
-    echo "❌ Rule missing: VPN traffic blocked (VPN clients will not have internet access)"
-fi
-
-# 7. DNS Hijack TCP/UDP port 53
-echo -e "\n[7] DNS Hijack TCP/UDP (port 53 → $RPI_IP):"
-TCP_RULE=$(sudo nft list chain ip nat prerouting | grep 'tcp dport 53' | grep "dnat to $RPI_IP")
-UDP_RULE=$(sudo nft list chain ip nat prerouting | grep 'udp dport 53' | grep "dnat to $RPI_IP")
-
-if [[ -n "$TCP_RULE" && -n "$UDP_RULE" ]]; then
-    echo "✅ Rules TCP/UDP present"
-else
-    echo "❌ Rules missing"
-fi
-
-# 8. SSH filtering rule from LAN/VPN
-echo -e "\n[8] SSH access only from LAN/VPN:"
-SSH_RULE=$(sudo nft list chain inet filter input | grep 'tcp dport 22' | grep -E '192\.168\.|10\.8\.')
-
-if [[ -n "$SSH_RULE" ]]; then
-    echo "✅ SSH rule present"
-else
-    echo "⚠️ No SSH filtering rule found"
-fi
-
-# 9. MASQUERADE
-echo -e "\n[9] MASQUERADE rules on $IFACE:"
-
-VPN_RULE_OK=$(sudo nft list chain ip nat postrouting | grep -q 'ip saddr 10.8.0.0/24 .* masquerade' && echo "ok")
-LAN_RULE_OK=$(sudo nft list chain ip nat postrouting | grep -q 'ip saddr 192.168.0.0/16 .* masquerade' && echo "ok")
-
-if [[ "$VPN_RULE_OK" == "ok" ]]; then
-    echo "✅ VPN (10.8.0.0/24) → MASQUERADE on $IFACE: present"
-else
-    echo "❌ VPN (10.8.0.0/24) → MASQUERADE on $IFACE: missing"
-fi
-
-if [[ "$LAN_RULE_OK" == "ok" ]]; then
-    echo "✅ LAN (192.168.0.0/16) → MASQUERADE on $IFACE: present"
-else
-    echo "❌ LAN (192.168.0.0/16) → MASQUERADE on $IFACE: missing"
-fi
-
-# 10. WIREGUARD
-echo -e "\n[10] WIREGUARD service status:"
-systemctl is-active wg-quick@wg0 &>/dev/null && echo "✅ Active" || echo "❌ NOT active"
-
-# 11. Wireguard/DDNS udp port check
-echo -e "\n[11] Check UDP $VPN_PORT port (WireGuard/DDNS):"
-
-# Check if port is listenig locally
-if sudo ss -uln | grep -q ":$VPN_PORT"; then
-    echo "✅ UDP $VPN_PORT port is listening locally"
-else
-    echo "❌ UDP $VPN_PORT port is NOT listening locally"
-fi
-
-# Check if port is allowed by firewall rules (nftables)
-if sudo nft list chain inet filter input | grep -q "udp dport $VPN_PORT accept"; then
-    echo "✅ UDP $VPN_PORT port is allowed by firewall"
-else
-    echo "⚠️ No firewall rule for UDP $VPN_PORT port find"
-fi
-
-# 12. Active VPN clients
-echo -e "\n[12] Active Wireguard peers:"
-wg show | awk '/peer:/{print "\n🔹 Peer: " $2} /allowed ips:|endpoint:|latest handshake:|transfer:/{print "   " $0}'
-
-# 13. DNS test
-echo -e "\n[13] DNS test:"
-host google.com 1.1.1.1 &>/dev/null && echo "✅ DNS working" || echo "❌ DNS NOT working"
-
-# 14. PI HOLE Web Interface
-echo -e "\n[14] PI HOLE Web:"
-curl -s --connect-timeout 2 http://127.0.0.1/admin/ > /dev/null && echo "✅ Web active" || echo "❌ NOT reachable"
-
-# 15. Outbound ping test
-echo -e "\n[15] Ping to 8.8.8.8:"
-ping -c 1 -W 2 8.8.8.8 &>/dev/null && echo "✅ Internet OK" || echo "❌ NO outbound access"
-
-# 16. FAIL2BAN
-echo -e "\n[16] FAIL2BAN:"
-systemctl is-active fail2ban &>/dev/null && echo "✅ Active" || echo "❌ NOT active"
-
-echo -e "\n✅ Diagnosis completed."
-
+sudo nano diagnostic.sh
 ```
-<!-- END diagnostic.sh -->
-save file, exit nano editor and make shell file executable:
+save the file and exit nano;    
+make the file executable:
 ```bash
-sudo chmod +x /usr/local/bin/diagnostic.sh
+sudo chmod +x diagnostic.sh
 ```
-you can launch the diagnostic scrip with:
+and move file to a more appropriate directory:
+```bash
+sudo mv diagnostic.sh /usr/local/bin/
+```
+run the script with:
 ```bash
 sudo diagnostic.sh
 ```
+
 
 ### 10. - Create a watchdog timer to check VPN server and Pi Hole status.
 Watchdog timer is a useful service that regularly checks the operational status of the VPN server and Pi Hole, and restore it in case of failure.   
