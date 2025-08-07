@@ -465,6 +465,18 @@ If you are under CGNAT and your ISP can't give you a static public IP address, i
 VPS online server will give you a static IPv6 address; you can install wireguard on VPS, with a different subnet and udp port from one you have installed on RPI, to act as server and install a client on RPI that will automatically connect to the VPS creating a tunneled connection; then you can route all traffic from VPS to RPI. In this way you can use your smartphone, tablet or laptop, configured as client of RPI VPN server that you configured in previous chapter, to use the VPS IPv6 static address to connect to the RPI and activate its VPN tunnel, bypassing CGNAT or NAT2 from your ISP.   
 
 
+### 85. - Add and remove VPN peers (clients)
+Following shell script will act as client manager giving you the options to:
+<ul>
+        <li>create a new VPN peer looking for first available VPN address, generate its access keys and configuration file, display a configuration QR code that can be red from smartphones and tablets using official Wireguard app for Android or iOS;</li>
+        <li>delete an existing peer, its access keys and configuration file, typing its name from a displayed list of configured peers.</li>
+</ul>
+You need to set the variables at the beginnig of the script according to your settings;  
+if your internet line has a static public IP address and the VPN UDP port is forwarded by router settings, set as ENDPOINT your static public IP address;    
+if your internet line has a dynamic public IP address but its NOT under CGNAT, your ISP allows VPN UDP port forwarding if its under NAT2, the VPN UDP port is forwarded by router settings and you configured ddclient, you should set as ENDPOINT the third level domain you got from your DDNS service;   
+otherwise set as ENDPOINT the RPI_static_IP, at least it will work when clients are connected to LAN.   
+
+
 ### 9. - Implement a manual diagnostic script to check installed services and rules.
 This script, when launched, will check that services you installed are working properly.   
 change variables in the beginnig of file according to your settings;   
