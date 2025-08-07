@@ -7,7 +7,7 @@ set -e
 # ip -brief addr | grep UP
 PIHOLE_IP="RPI_static_IP"
 IFACE="eth0"
-VPN_PORT="45678"
+VPN_PORT="51234"
 WG_IFACE="wg0"
 VPN_SUBNET="10.8.0.0/24"
 

@@ -201,7 +201,7 @@ you need to set your network clients to use *RPI_static_IP* as DNS address or yo
 ### 7. – Install and configure NAT and firewall rules, gateway, Wireguard VPN, and DDNS.
 This script will provide the installation of necessary software packages and the configuration of various services like Wireguard VPN server, disable IPv6 traffic for security purposes, sets nftables rules to use the RPI as gateway and hijack hard-coded DNS providers in Smart-TV, sets firewall and failtoban rules and configures ddclient to access your VPN server while your smartphones or laptops are not connected to the LAN if your ISP gives you a dynamic IP address.   
 While is quite simple to disable IPv6 traffic through the configuration of the network manager on your PC or laptop, and also many Smart-TV models give the oprion in their network settings, is way more difficult on your smartphone because it will probably require root privileges; setting the RPI as your gateway while your smartphone is connected to the LAN or VPN will block all IPv6 traffic.   
-You need to forward the udc port you will use for your VPN server (45678 in this example) from the exterior to your RPI_static_IP in your router configuration; if your router does not have port forwarding function, it will probably have virtual server function where you can set the same rule.   
+You need to forward the udc port you will use for your VPN server (51234 in this example) from the exterior to your RPI_static_IP in your router configuration; if your router does not have port forwarding function, it will probably have virtual server function where you can set the same rule.   
 **NOTE:** the VPN you are installing will **NOT** hide your public IP address; it will only encrypt the communications from your device to the destination you're reaching, avoiding third parties to be able to intercept your data. To hide your public IP or de-geolocalize it for purposes like see Netflix content not available in your country, you'll need a commercial VPN subscription, that gives you the chance to connect to servers located in different countries; there's a wide variety of offers in the VPN market, but providers that are unanimously considered the best ones privacy-wise are swedish <a href="https://mullvad.net" target="_blank">Mullvad</a> and swiss <a href="https://protonvpn.com/" target="_blank">Proton</a> due to the strict privacy laws of coutries they're operating from.   
 With rules set in nftables and previous configuration of SSH access only with security key token, SSH port is already protected from brute-force attacks and is also not exposed to WAN direct access, but can be only reached from LAN or VPN addresses; fail2ban is installed only for auditing/forensic purposes on failed access logs, but will be useful if you will change rule settings on SSH port.   
 For ddclient configuration, you will need some parameters that can be obtained from the control panel of DDNS provider service you subscribed, like protocol used, username, password and third level domain you have chosen.   
@@ -228,7 +228,7 @@ set -e
 # ip -brief addr | grep UP
 PIHOLE_IP="RPI_static_IP"
 IFACE="eth0"
-VPN_PORT="45678"
+VPN_PORT="51234"
 WG_IFACE="wg0"
 VPN_SUBNET="10.8.0.0/24"
 
@@ -401,7 +401,71 @@ sudo ./install_services.sh
 ```
 after the script has finished services installaion you need to reboot the RPI.
 
-### 8. - Implement a manual diagnostic script to check installed services and rules.
+### 8. - CGNAT and NAT2
+ISP implements security features on the internet line you purchase and most common are CGNAT and double NAT or NAT2, that are used mainly when you have a dynamic public IP address.   
+With those features configured on your internet line you will be unable to access the RPI from the WAN and consequentially you will be also unable to use your Wireguard VPN when you're not connected to LAN.  
+The following shell script will help you to check your internet line and know if you are under CGNAT or NAT2;   
+first you need to create a shell file:
+```bash
+nano cgnat_check.sh
+```
+copy following script and paste it into nano editor:
+<!-- BEGIN cgnat_check.sh -->
+```bash
+#!/bin/bash
+
+# Needs root privileges
+[[ $EUID -ne 0 ]] && echo "⚠️ You need root privileges (sudo) to run this script" && exit 1
+
+IP_PUB=$(curl -s https://ifconfig.me)
+IP_LOC=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -vE '^127\.|^169\.254\.')
+IP_WAN=$(ip route get 1.1.1.1 | grep -oP 'src \K[\d.]+')
+
+echo "=================================================="
+echo "            🌐 Check CGNAT Active"
+echo "=================================================="
+echo -e "\n🌐 Public IP (visible online): $IP_PUB"
+echo "🏠 Local IP (Raspberry):         $IP_LOC"
+echo "🔌 WAN IP (from router):         $IP_WAN"
+
+# Check if public IP matches WAN IP
+if [[ "$IP_PUB" != "$IP_WAN" ]]; then
+    echo -e "\n❗ Your public IP is different from WAN IP → CGNAT possible"
+else
+    echo -e "\n✅ Your public IP match with WAN IP → Probably you are NOT under CGNAT"
+fi
+
+# Check if WAN IP is in CGNAT range or private
+check_range() {
+    IP="$1"
+    if [[ $IP =~ ^192\.168\. ]] || [[ $IP =~ ^10\. ]] || [[ $IP =~ ^172\.(1[6-9]|2[0-9]|3[0-1])\. ]]; then
+        echo "🔒 WAN IP is in a LAN private range → Probably NAT2"
+    elif [[ $IP =~ ^100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\. ]]; then
+        echo "🔒 WAN IP is in CGNAT range (100.64.0.0/10) → CGNAT ACTIVE"
+    fi
+}
+check_range "$IP_WAN"
+
+echo -e "\n✅ Check complete."
+
+```
+<!-- END cgnat_check.sh -->
+make the script executable:
+```bash
+chmod +x cgnat_check.sh
+```
+and run the scropt with:
+```bash
+sudo ./cgnat_check.sh
+```
+If you want also to check the correct forwarding of VPN/DDNS **udp** port (51234) from WAN to your RPI you can use <a href="https://www.yougetsignal.com/tools/open-ports/" target="_blank">YouGetSignal</a> web tool.   
+In case you're under CGNAT or NAT2 you can check with your ISP the possibility to change from dynamic to static public IP address; this will probably involve some fees.   
+If your ISP configured a NAT2 on your line it probably offers the function of port forwarding through a control panel or upon request.   
+If you are under CGNAT and your ISP can't give you a static public IP address, if you are under NAT2 and your ISP don't allow port forwarding function and if you can't or don't want to change to a different ISP that offers those options, there's a workaround: you can subscribe for an online Linux VPS service; with a web search you can find many offers on the VPS market; there are some free solution even from tech colossus like Google and Oracle. Paid services for the specs you'll need will cost you € 1,00 per month.   
+VPS online server will give you a static IPv6 address; you can install wireguard on VPS, with a different subnet and udp port from one you have installed on RPI, to act as server and install a client on RPI that will automatically connect to the VPS creating a tunneled connection; then you can route all traffic from VPS to RPI. In this way you can use your smartphone, tablet or laptop, configured as client of RPI VPN server that you configured in previous chapter, to use the VPS IPv6 static address to connect to the RPI and activate its VPN tunnel, bypassing CGNAT or NAT2 from your ISP.   
+
+
+### 9. - Implement a manual diagnostic script to check installed services and rules.
 This script, when launched, will check that services you installed are working properly.   
 change variables in the beginnig of file according to your settings;   
 First you need to create a shell file:
@@ -418,10 +482,10 @@ RPI_IP="RPI_static_IP"
 # Set interface in use: eth0 or wlan0
 IFACE="eth0"
 # Set udp port used by VPN and DDNS
-VPN_PORT="45678"
+VPN_PORT="51234"
 
 echo "=============================="
-echo "= 🔍  Services diagnostic    ="
+echo "= 🔍  Services diagnosis     ="
 echo "=============================="
 
 # 1. Show active interfaces
@@ -437,7 +501,7 @@ echo -e "\n[2] IP forwarding:"
 echo -e "\n[3] NFTABLES service status:"
 systemctl is-active nftables &>/dev/null && echo "✅ Active" || echo "❌ NOT active"
 
-# 4. Existence of expected rooting chains
+# 4. Presence of expected rooting chains
 echo -e "\n[4] Rooting chains:"
 sudo nft list ruleset | grep -q 'table ip nat' && echo "✅ NAT" || echo "❌ NAT missing"
 sudo nft list ruleset | grep -q 'table inet filter' && echo "✅ FILTER" || echo "❌ FILTER missing"
@@ -479,7 +543,7 @@ else
     echo "⚠️ No SSH filtering rule found"
 fi
 
-# 9. MASQUERADE on eth0/wlan0
+# 9. MASQUERADE
 echo -e "\n[9] MASQUERADE rules on $IFACE:"
 
 VPN_RULE_OK=$(sudo nft list chain ip nat postrouting | grep -q 'ip saddr 10.8.0.0/24 .* masquerade' && echo "ok")
@@ -504,14 +568,14 @@ systemctl is-active wg-quick@wg0 &>/dev/null && echo "✅ Active" || echo "❌ N
 # 11. Wireguard/DDNS udp port check
 echo -e "\n[11] Check UDP $VPN_PORT port (WireGuard/DDNS):"
 
-# Check if the port is listenig locally
+# Check if port is listenig locally
 if sudo ss -uln | grep -q ":$VPN_PORT"; then
     echo "✅ UDP $VPN_PORT port is listening locally"
 else
     echo "❌ UDP $VPN_PORT port is NOT listening locally"
 fi
 
-# Check if iTs allowed by firewall rules (nftables)
+# Check if port is allowed by firewall rules (nftables)
 if sudo nft list chain inet filter input | grep -q "udp dport $VPN_PORT accept"; then
     echo "✅ UDP $VPN_PORT port is allowed by firewall"
 else
@@ -551,7 +615,7 @@ you can launch the diagnostic scrip with:
 sudo diagnostic.sh
 ```
 
-### 9. - Create a watchdog timer to check VPN server and Pi Hole status.
+### 10. - Create a watchdog timer to check VPN server and Pi Hole status.
 Watchdog timer is a useful service that regularly checks the operational status of the VPN server and Pi Hole, and restore it in case of failure.   
 You first need to creae a shell file:
 ```bash

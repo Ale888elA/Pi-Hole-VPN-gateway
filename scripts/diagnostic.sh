@@ -5,10 +5,10 @@ RPI_IP="RPI_static_IP"
 # Set interface in use: eth0 or wlan0
 IFACE="eth0"
 # Set udp port used by VPN and DDNS
-VPN_PORT="45678"
+VPN_PORT="51234"
 
 echo "=============================="
-echo "= 🔍  Services diagnostic    ="
+echo "= 🔍  Services diagnosis     ="
 echo "=============================="
 
 # 1. Show active interfaces
@@ -24,7 +24,7 @@ echo -e "\n[2] IP forwarding:"
 echo -e "\n[3] NFTABLES service status:"
 systemctl is-active nftables &>/dev/null && echo "✅ Active" || echo "❌ NOT active"
 
-# 4. Existence of expected rooting chains
+# 4. Presence of expected rooting chains
 echo -e "\n[4] Rooting chains:"
 sudo nft list ruleset | grep -q 'table ip nat' && echo "✅ NAT" || echo "❌ NAT missing"
 sudo nft list ruleset | grep -q 'table inet filter' && echo "✅ FILTER" || echo "❌ FILTER missing"
@@ -66,7 +66,7 @@ else
     echo "⚠️ No SSH filtering rule found"
 fi
 
-# 9. MASQUERADE on eth0/wlan0
+# 9. MASQUERADE
 echo -e "\n[9] MASQUERADE rules on $IFACE:"
 
 VPN_RULE_OK=$(sudo nft list chain ip nat postrouting | grep -q 'ip saddr 10.8.0.0/24 .* masquerade' && echo "ok")
@@ -91,14 +91,14 @@ systemctl is-active wg-quick@wg0 &>/dev/null && echo "✅ Active" || echo "❌ N
 # 11. Wireguard/DDNS udp port check
 echo -e "\n[11] Check UDP $VPN_PORT port (WireGuard/DDNS):"
 
-# Check if the port is listenig locally
+# Check if port is listenig locally
 if sudo ss -uln | grep -q ":$VPN_PORT"; then
     echo "✅ UDP $VPN_PORT port is listening locally"
 else
     echo "❌ UDP $VPN_PORT port is NOT listening locally"
 fi
 
-# Check if iTs allowed by firewall rules (nftables)
+# Check if port is allowed by firewall rules (nftables)
 if sudo nft list chain inet filter input | grep -q "udp dport $VPN_PORT accept"; then
     echo "✅ UDP $VPN_PORT port is allowed by firewall"
 else
