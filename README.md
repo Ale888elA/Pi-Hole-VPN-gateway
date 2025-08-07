@@ -233,9 +233,9 @@ sudo ./install_services.sh
 after the script has finished services installaion you need to reboot the RPI.
 
 ### 8. - CGNAT and NAT2
-ISP implements security features on the internet line you purchase and most common are CGNAT and double NAT or NAT2, that are used mainly when you have a dynamic public IP address.   
-With those features configured on your internet line you will be unable to access the RPI from the WAN and consequentially you will be also unable to use your Wireguard VPN when you're not connected to LAN.  
-The following shell script will help you to check your internet line and know if you are under CGNAT or NAT2;   
+ISP implements security features on the internet line you purchase and most common are CGNAT and double NAT or NAT2, that are used mainly when you have a dynamic public IP address.    
+With those features configured on your internet line you will be unable to access the RPI from the WAN and consequentially you will be also unable to use your Wireguard VPN when you're not connected to LAN.    
+The following shell script will help you to check your internet line and know if you are under CGNAT or NAT2;    
 From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/blob/main/scripts/cgnat_check.sh" target="_blank">cgnat_check.sh</a> script to your home directory: 
 ```bash
 wget https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/raw/main/scripts/cgnat_check.sh
@@ -250,24 +250,43 @@ sudo ./cgnat_check.sh
 ```
 If you want also to check the correct forwarding of VPN/DDNS **udp** port (51234) from WAN to your RPI you can use <a href="https://www.yougetsignal.com/tools/open-ports/" target="_blank">YouGetSignal</a> web tool.   
 In case you're under CGNAT or NAT2 you can check with your ISP the possibility to change from dynamic to static public IP address; this will probably involve some fees.   
-If your ISP configured a NAT2 on your line it probably offers the function of port forwarding through a control panel or upon request.   
-If you are under CGNAT and your ISP can't give you a static public IP address, if you are under NAT2 and your ISP don't allow port forwarding function and if you can't or don't want to change to a different ISP that offers those options, there's a workaround: you can subscribe for an online Linux VPS service; with a web search you can find many offers on the VPS market; there are some free solution even from tech colossus like Google and Oracle. Paid services for the specs you'll need will cost you € 1,00 per month.   
+If your ISP configured a NAT2 on your line it probably offers the function of port forwarding through a control panel or upon request.    
+If you are under CGNAT and your ISP can't give you a static public IP address, if you are under NAT2 and your ISP don't allow port forwarding function and if you can't or don't want to change to a different ISP that offers those options, there's a workaround: you can subscribe for an online Linux VPS service; with a web search you can find many offers on the VPS market; there are some free solution even from tech colossus like Google and Oracle. Paid services for the specs you'll need will cost you € 1,00 per month.    
 VPS online server will give you a static IPv6 address; you can install wireguard on VPS, with a different subnet and udp port from one you have installed on RPI, to act as server and install a client on RPI that will automatically connect to the VPS creating a tunneled connection; then you can route all traffic from VPS to RPI. In this way you can use your smartphone, tablet or laptop, configured as client of RPI VPN server that you configured in previous chapter, to use the VPS IPv6 static address to connect to the RPI and activate its VPN tunnel, bypassing CGNAT or NAT2 from your ISP.   
 
 
-### 85. - Add and remove VPN peers (clients)
+### 9. - Add and remove VPN peers (clients)
 Following shell script will act as client manager giving you the options to:
 <ul>
-        <li>create a new VPN peer looking for first available VPN address, generate its access keys and configuration file, display a configuration QR code that can be red from smartphones and tablets using official Wireguard app for Android or iOS;</li>
-        <li>delete an existing peer, its access keys and configuration file, typing its name from a displayed list of configured peers.</li>
+        <li>create a new VPN peer looking for first available VPN address, generate access keys and configuration file, display a configuration QR code that can be red from smartphones and tablets using official Wireguard app for Android or iOS;</li>
+        <li>delete an existing peer, access keys and configuration file, typing its name from a displayed list of configured peers.</li>
 </ul>
-You need to set the variables at the beginnig of the script according to your settings;  
-if your internet line has a static public IP address and the VPN UDP port is forwarded by router settings, set as ENDPOINT your static public IP address;    
-if your internet line has a dynamic public IP address but its NOT under CGNAT, your ISP allows VPN UDP port forwarding if its under NAT2, the VPN UDP port is forwarded by router settings and you configured ddclient, you should set as ENDPOINT the third level domain you got from your DDNS service;   
-otherwise set as ENDPOINT the RPI_static_IP, at least it will work when clients are connected to LAN.   
+You need to set the variables at the beginnig of the script according to your settings;     
+if your internet line has a static public IP address and the VPN UDP port is forwarded by router settings, set as ENDPOINT your static public IP address;     
+if your internet line has a dynamic public IP address but its NOT under CGNAT, your ISP allowed VPN UDP port forwarding if its under NAT2, the VPN UDP port is forwarded by router settings and you configured ddclient, you should set as ENDPOINT the third level domain you got from your DDNS service;     
+otherwise set as ENDPOINT the RPI_static_IP, at least it will work when clients are connected to LAN.    
+From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/blob/main/scripts/wg_client_manager.sh" target="_blank">wg_client_manager.sh</a> script to your home directory:   
+
+```bash
+wget https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/raw/main/scripts/wg_client_manager.sh
+```
+open the script with nano and change the variables in the beginning of the file to match your settings:
+```bash
+sudo nano wg_client_manager.sh
+```
+save the file and exit nano;    
+make the file executable and move it to a more appropriate directory:
+```bash
+sudo chmod +x wg_client_manager.sh
+sudo mv wg_client_manager.sh /usr/local/bin/
+```
+run the script with:
+```bash
+sudo wg_client_manager.sh
+```
 
 
-### 9. - Implement a manual diagnostic script to check installed services and rules.
+### 10. - Implement a manual diagnostic script to check installed services and rules.
 This script, when launched, will check that services you installed are working properly.   
 change variables in the beginnig of file according to your settings;   
 From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/blob/main/scripts/diagnostic.sh" target="_blank">diagnostic.sh</a> script to your home directory: 
@@ -279,12 +298,9 @@ open the script with nano and change the variables in the beginning of the file 
 sudo nano diagnostic.sh
 ```
 save the file and exit nano;    
-make the file executable:
+make the file executable and move it to a more appropriate directory:
 ```bash
 sudo chmod +x diagnostic.sh
-```
-and move file to a more appropriate directory:
-```bash
 sudo mv diagnostic.sh /usr/local/bin/
 ```
 run the script with:
@@ -293,76 +309,24 @@ sudo diagnostic.sh
 ```
 
 
-### 10. - Create a watchdog timer to check VPN server and Pi Hole status.
+### 11. - Create a watchdog timer to check VPN server and Pi Hole status.
 Watchdog timer is a useful service that regularly checks the operational status of the VPN server and Pi Hole, and restore it in case of failure.   
-You first need to creae a shell file:
+From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/blob/main/scripts/diagnostic.sh" target="_blank">watchdog.sh</a> script, <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/blob/main/scripts/pi-vpn-watchdog.service" target="_blank">pi-vpn-watchdog.service</a> and <a href="https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/blob/main/scripts/pi-vpn-watchdog.timer" target="_blank">pi-vpn-watchdog.timer</a> to your home directory: 
 ```bash
-sudo nano /usr/local/bin/watchdog.sh
-```
-and copy following code into it:
-<!-- BEGIN watchdog.sh -->
+wget https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/raw/main/scripts/watchdog.sh
+wget https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/raw/main/scripts/pi-vpn-watchdog.service
+wget https://github.com/Ale888elA/Using-a-Raspberry-Pi-as-a-VPN-server-Gateway-DNS-sinkhole/raw/main/scripts/pi-vpn-watchdog.timer
+```   
+make the script watchdog.sh executable and move it to the appropriate directory:
 ```bash
-#!/bin/bash
-
-WG_INTERFACE="wg0"
-DNS_CHECK="pi.hole"
-
-# Check WireGuard handshake
-if ! sudo wg show $WG_INTERFACE | grep -q "latest handshake"; then
-    echo "WireGuard inactive. Restart..."
-    systemctl restart wg-quick@$WG_INTERFACE
-fi
-
-# Check Pi-hole DNS
-if ! dig @$DNS_CHECK | grep -q "ANSWER SECTION"; then
-    echo "Pi-hole is non respondig. Restart DNS and Pi-hole..."
-    systemctl restart pihole-FTL
-fi
+sudo chmod +x watchdog.sh
+sudo mv watchdog.sh /usr/local/bin/
 ```
-<!-- END watchdog.sh -->
-save file and exit nano, then make the file executable:
+move the two ini files to the appropriate directory:
 ```bash
-sudo chmod +x /usr/local/bin/watchdog.sh
+sudo mv pi-vpn-watchdog.service /etc/systemd/system/
+sudo mv pi-vpn-watchdog.timer /etc/systemd/system/
 ```
-Now you need to create two ini files to allow the watchdog timer to work:
-```bash
-sudo nano /etc/systemd/system/pi-vpn-watchdog.service
-```
-and copy following code into it:
-<!-- BEGIN pi-vpn-watchdog.service -->
-```bash
-[Unit]
-Description=Watchdog for Pi-hole and WireGuard
-After=network.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/watchdog.sh
-
-[Install]
-WantedBy=multi-user.target
-```
-<!-- END pi-vpn-watchdog.service -->
-save file and exit nano;
-```bash
-sudo nano /etc/systemd/system/pi-vpn-watchdog.timer
-```
-and copy following code into it:
-<!-- BEGIN pi-vpn-watchdog.timer -->
-```bash
-[Unit]
-Description=Execute Watchdog every 2 minutes
-
-[Timer]
-OnBootSec=2min
-OnUnitActiveSec=2min
-Unit=pi-vpn-watchdog.service
-
-[Install]
-WantedBy=timers.target
-```
-<!-- END pi-vpn-watchdog.timer -->
-save file and exit nano.   
 Now you need to reload daemon and enable the new service so it will be automatically loaded on every RPI boot:
 ```bash
 sudo systemctl daemon-reexec
