@@ -13,7 +13,7 @@ This guide is suited for the security exigences of a home network and for privat
 ### Secondary goals:
 <ul>
         <li>configure <a href="https://wiki.debian.org/UnattendedUpgrades" target="_blank">unattended-upgrades</a> to automate <a href="https://en.wikipedia.org/wiki/Raspberry_Pi_OS" target="_blank">Raspberry Pi OS</a> updates;</li>
-        <li>configure the RPI to refuse <a href="https://en.wikipedia.org/wiki/Secure_Shell" target="_blank">SSH</a> password access and use instead a security key token;</li>
+        <li>configure the RPI to refuse <a href="https://en.wikipedia.org/wiki/Secure_Shell" target="_blank">SSH</a> password access and use instead a security key;</li>
         <li>setup <a href="https://en.wikipedia.org/wiki/Network_address_translation" target="_blank">NAT</a> and firewall rules for security purposes and preventing <a href="https://en.wikipedia.org/wiki/DNS_over_TLS" target="_blank">DoT</a> and <a href="https://en.wikipedia.org/wiki/DNS_over_HTTPS" target="_blank">DoH</a> queries;</li>
         <li>configure a <a href="https://en.wikipedia.org/wiki/Dynamic_DNS" target="_blank">DDNS</a> service to access the VPN server through the dynamic public IP address given by your <a href="https://en.wikipedia.org/wiki/Internet_service_provider" target="_blank">ISP</a> from smartphones, tablets and laptops while are not connected to the <a href="https://en.wikipedia.org/wiki/Local_area_network" target="_blank">LAN</a>;</li>        
         <li>implement a diagnostic script that checks that services intalled on RPI are working propely;</li>
@@ -132,47 +132,47 @@ and if you’re not getting any error messages you can enable unattended-upgrade
 sudo dpkg-reconfigure --priority=low unattended-upgrades
 ```
 
-### 5. – Set SSH access to the RPI using a security token.
-Security key token implements strong security standards to SSH access to your RPI and along with failtoban and ufw that will be configured later prevent access through brute-force attacks on your RPI SSH port; for this purpose you can also change the default port (22) used by SSH protocol.   
-First you need to generate the security key token on your Linux client PC:
+### 5. – Set SSH access to the RPI using a security key.
+Security key implements strong security standards to SSH access to your RPI and along with failtoban and firewall rules that will be configured later prevent access through brute-force attacks on your RPI SSH port; for this purpose you can also change the default port (22) used by SSH protocol.   
+First you need to generate the security key on your Linux client PC:
 ```bash
 ssh-keygen -t rsa
 ```
-you will be asked to give a name to generated security key token;   
+you will be asked to give a name to generated security key;   
 both public and private key will be stored in /home/*client_userID*/.ssh/ directory of your Linux client PC;   
-copy the token public key to the RPI, adjusting *tokenname*, *RPI_static_IP* and *userID* varibles according to your settings:
+copy the public key to the RPI, adjusting *keyname*, *RPI_static_IP* and *userID* varibles according to your settings:
 ```bash
-scp ~/.ssh/tokenname_rsa.pub userID@RPI_static_IP:/home/userID/
+scp ~/.ssh/keyname_rsa.pub userID@RPI_static_IP:/home/userID/
 ```
-now you need to access to the RPI via SSH and create a file that SSH daemon will look for when you’re trying to access the RPI with the security key token:
+now you need to access to the RPI via SSH and create a file that SSH daemon will look for when you’re trying to access the RPI with the security key:
 ```bash
 install -d -m 700 ~/.ssh
 ```
-now you can add the token public key to the created **authorized_keys** file:
+now you can add the public key to the created **authorized_keys** file:
 ```bash
-cat /home/userID/tokenname_rsa.pub >> ~/.ssh/authorized_keys
+cat /home/userID/keyname_rsa.pub >> ~/.ssh/authorized_keys
 ```
 and then set the correct permission, user and group to the file:
 ```bash
 sudo chmod 644 ~/.ssh/authorized_keys
 sudo chown userID:userID ~/.ssh/authorized_keys
 ```
-you need to repeat the steps regarding key token creation, copy public key to the RPI and add it to authorized_key file procedures from all the PCs and laptops you wish to grant SSH key token access to your RPI;   
+you need to repeat the steps regarding key creation, copy public key to the RPI and add it to authorized_key file procedures from all the PCs and laptops you wish to grant SSH key access to your RPI;   
 you can also remove the public key file:
 ```bash
-rm /home/userID/tokenname_rsa.pub
+rm /home/userID/keyname_rsa.pub
 ```
-after all PCs and laptops keys has been added, you need to edit the SSH configuration file to inhibit access via password:
+after all PCs and laptops keys has been added, you need to edit the SSH configuration file to prevent access via password:
 ```bash
 sudo nano /etc/ssh/sshd_config
 ```
 look for the line **PasswordAuthentication**, if is commented with **#** symbol uncomment it and set bolean value to **“no”**.   
 Save file and exit nano editor (CTRL+O, ENTER, CTRL+X).   
-After rebooting the RPI you will need to call the security key token to access the RPI via SSH:
+After rebooting the RPI you will need to call the security key to access the RPI via SSH:
 ```bash
-ssh -i /home/client_userID/.ssh/tokenname_rsa userID@RPI_static_IP
+ssh -i /home/client_userID/.ssh/keyname_rsa userID@RPI_static_IP
 ```
-SSH security key tokens can be also generated from MacOS, Windows and other operating systems, I’ll leave you the pleasure to do a simple web search to get this knowledge.
+SSH security keys can be also generated from MacOS, Windows and other operating systems, I’ll leave you the pleasure to do a simple web search to get this knowledge.
 
 ### 6. – Install Pi Hole.
 The installation process is completely automated and you will be asked only few simple questions to complete the setup and get the Pi Hole working:
@@ -203,7 +203,7 @@ This script will provide the installation of necessary software packages and the
 While is quite simple to disable IPv6 traffic through the configuration of the network manager on your PC or laptop, and also many Smart-TV models give the oprion in their network settings, is way more difficult on your smartphone because it will probably require root privileges; setting the RPI as your gateway while your smartphone is connected to the LAN or VPN will block all IPv6 traffic.   
 You need to forward the udc port you will use for your VPN server (51234 in this example) from the exterior to your RPI_static_IP in your router configuration; if your router does not have port forwarding function, it will probably have virtual server function where you can set the same rule.   
 **NOTE:** the VPN you are installing will **NOT** hide your public IP address; it will only encrypt the communications from your device to the destination you're reaching, avoiding third parties to be able to intercept your data. To hide your public IP or de-geolocalize it for purposes like see Netflix content not available in your country, you'll need a commercial VPN subscription, that gives you the chance to connect to servers located in different countries; there's a wide variety of offers in the VPN market, but providers that are unanimously considered the best ones privacy-wise are swedish <a href="https://mullvad.net" target="_blank">Mullvad</a> and swiss <a href="https://protonvpn.com/" target="_blank">Proton</a> due to the strict privacy laws of coutries they're operating from.   
-With rules set in nftables and previous configuration of SSH access only with security key token, SSH port is already protected from brute-force attacks and is also not exposed to WAN direct access, but can be only reached from LAN or VPN addresses; fail2ban is installed only for auditing/forensic purposes on failed access logs, but will be useful if you will change rule settings on SSH port.   
+With rules set in nftables and previous configuration of SSH access only with security key, SSH port is already protected from brute-force attacks and is also not exposed to WAN direct access, but can be only reached from LAN or VPN addresses; fail2ban is installed only for auditing/forensic purposes on failed access logs, but will be useful if you will change rule settings on SSH port.   
 For ddclient configuration, you will need some parameters that can be obtained from the control panel of DDNS provider service you subscribed, like protocol used, username, password and third level domain you have chosen.   
 If you have a static public IP you can skip ddclient configuration with CTRL+C.   
 You can check your IP address and active interface name executing this command on the RPI:
