@@ -15,17 +15,17 @@ This guide is suited for the security exigences of a home network and for privat
         <li>configure <a href="https://wiki.debian.org/UnattendedUpgrades" target="_blank">unattended-upgrades</a> to automate <a href="https://en.wikipedia.org/wiki/Raspberry_Pi_OS" target="_blank">Raspberry Pi OS</a> updates;</li>
         <li>configure the RPI to refuse <a href="https://en.wikipedia.org/wiki/Secure_Shell" target="_blank">SSH</a> password access and use instead a security key token;</li>
         <li>setup <a href="https://en.wikipedia.org/wiki/Network_address_translation" target="_blank">NAT</a> and firewall rules for security purposes and preventing <a href="https://en.wikipedia.org/wiki/DNS_over_TLS" target="_blank">DoT</a> and <a href="https://en.wikipedia.org/wiki/DNS_over_HTTPS" target="_blank">DoH</a> queries;</li>
-        <li>configure a <a href="https://en.wikipedia.org/wiki/Dynamic_DNS" target="_blank">DDNS</a> service to access the VPN server through the dynamic public IP address given by your <a href="https://en.wikipedia.org/wiki/Internet_service_provider" target="_blank">ISP</a> from smartphones and laptops while are not connected to the <a href="https://en.wikipedia.org/wiki/Local_area_network" target="_blank">LAN</a>;</li>        
+        <li>configure a <a href="https://en.wikipedia.org/wiki/Dynamic_DNS" target="_blank">DDNS</a> service to access the VPN server through the dynamic public IP address given by your <a href="https://en.wikipedia.org/wiki/Internet_service_provider" target="_blank">ISP</a> from smartphones, tablets and laptops while are not connected to the <a href="https://en.wikipedia.org/wiki/Local_area_network" target="_blank">LAN</a>;</li>        
         <li>implement a diagnostic script that checks that services intalled on RPI are working propely;</li>
         <li>implement a <a href="https://en.wikipedia.org/wiki/Watchdog_timer" target="_blank">watchdog timer</a> that regularly checks VPN server and Pi Hole status;</li>
-        <li>implement a script to automate the creation and purge of VPN clients and their relative access keys and creates a configuration QR code for smartphones;</li>
-        <li>automate the creation of a password protected backup archive of RPI configuration and its upload on Google Drive or other cloud storage services;</li>
+        <li>implement a script to automate the creation and purge of VPN clients, their relative access keys and and configuration files,that also shows a configuration QR code for smartphones and tablets;</li>
+        <li>automate the creation of a password protected backup archive of RPI configuration and its upload on a cloud storage service;</li>
         <li>implement a script for manual restore from a password protected backup archive file.</li>
 </ul>
 
 
 ### Specs:
-Hardware used is a RPI 4 4Gb RAM with a 64Gb microSD memory card, cable connected to my 5G modem/router LAN port, but it can be set to use Wi-Fi connection instead. You’ll also need a microSD card reader.   
+Hardware used is a RPI 4 with 4Gb RAM and 64Gb microSD memory card, cable connected to my 5G modem/router LAN port, but it can be set to use Wi-Fi connection instead. You’ll also need a microSD card reader.   
 The operative system installed on the RPI is Raspberry Pi OS 64bit headless (without desktop environment), based on Linux <a href="https://www.debian.org/releases/bookworm/" target="_blank">Debian Bookworm</a>.   
 Required additional Linux software packages from Debian APT: unattended-upgrades, bsd-mailx, nftables, fail2ban, wireguard, qrencode, rclone, ddclient, zip, unzip.   
 Required additional software from external source: Pi-Hole.   
@@ -233,7 +233,7 @@ sudo ./install_services.sh
 after the script has finished services installaion you need to reboot the RPI.
 
 ### 8. - CGNAT and NAT2
-ISP implements security features on the internet line you purchase and most common are CGNAT and double NAT or NAT2, that are used mainly when you have a dynamic public IP address.    
+ISP implements security features on the internet line you subscribe for and most common are CGNAT and double NAT or NAT2, that are used when it gives you a dynamic public IP address.    
 With those features configured on your internet line you will be unable to access the RPI from the WAN and consequentially you will be also unable to use your Wireguard VPN when you're not connected to LAN.    
 The following shell script will help you to check your internet line and know if you are under CGNAT or NAT2;    
 From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/cgnat_check.sh" target="_blank">cgnat_check.sh</a> script to your home directory: 
@@ -251,8 +251,8 @@ sudo ./cgnat_check.sh
 If you want also to check the correct forwarding of VPN/DDNS **udp** port (51234) from WAN to your RPI you can use <a href="https://www.yougetsignal.com/tools/open-ports/" target="_blank">YouGetSignal</a> web tool.   
 In case you're under CGNAT or NAT2 you can check with your ISP the possibility to change from dynamic to static public IP address; this will probably involve some fees.   
 If your ISP configured a NAT2 on your line it probably offers the function of port forwarding through a control panel or upon request.    
-If you are under CGNAT and your ISP can't give you a static public IP address, if you are under NAT2 and your ISP don't allow port forwarding function and if you can't or don't want to change to a different ISP that offers those options, there's a workaround: you can subscribe for an online Linux VPS service; with a web search you can find many offers on the VPS market; there are some free solution even from tech colossus like Google and Oracle. Paid services for the specs you'll need will cost you € 1,00 per month.    
-VPS online server will give you a static IPv6 address; you can install wireguard on VPS, with a different subnet and udp port from one you have installed on RPI, to act as server and install a client on RPI that will automatically connect to the VPS creating a tunneled connection; then you can route all traffic from VPS to RPI. In this way you can use your smartphone, tablet or laptop, configured as client of RPI VPN server that you configured in previous chapter, to use the VPS IPv6 static address to connect to the RPI and activate its VPN tunnel, bypassing CGNAT or NAT2 from your ISP.   
+If you are under CGNAT and your ISP can't give you a static public IP address, if you are under NAT2 and your ISP don't allow port forwarding function and if you can't or don't want to change to a different ISP that offers those options, there's a workaround: you can subscribe for an online Linux VPS service; with a web search you can find many offers on the VPS market, and also a lot of scams, so choose your VPS service provider wisely; there are some free solution even from tech colossus like Google and Oracle. Paid services for the specs you'll need will cost you € 1,00 per month.    
+VPS online server will give you a static IP address; you can install wireguard on VPS, with a different subnet from one you have installed on RPI, to act as server and install a client on RPI that will automatically connect to the VPS creating an encrypted tunnel connection; then you can route all traffic from VPS to RPI. In this way you can use your smartphone, tablet or laptop, configured as client of RPI VPN server that you set up in previous chapter, to use the VPS static public IP address to connect to the RPI and activate their VPN tunnel, bypassing CGNAT or NAT2 from your ISP.   
 
 
 ### 9. - Add and remove VPN peers (clients)
@@ -263,10 +263,10 @@ Following shell script will act as client manager giving you the options to:
 </ul>
 You need to set the variables at the beginnig of the script according to your settings;<br>     
 <ul>
-        <li>if your internet line has a static public IP address and the VPN UDP port is forwarded by router settings, set as ENDPOINT your **static public IP address**;</li>
-        <li>if your internet line has a dynamic public IP address but its NOT under CGNAT, your ISP allowed VPN UDP port forwarding if its under NAT2, the VPN UDP port is forwarded by router settings and you configured ddclient, you should set as ENDPOINT the **third level domain** you got from your DDNS service;</li>
-        <li>if you have configured a VPN on VPS that forwards traffic to the the RPI as its client, you should set as ENDPOINT the **VPS static public IP address or domain**;</li>
-        <li>otherwise set as ENDPOINT the **RPI_static_IP**, it will work ONLY when clients are connected to LAN.</li>
+        <li>if your internet line has a static public IP address and the VPN UDP port is forwarded by router settings, set as ENDPOINT your static public IP address;</li>
+        <li>if your internet line has a dynamic public IP address but its NOT under CGNAT, your ISP allowed VPN UDP port forwarding if its under NAT2, the VPN UDP port is forwarded by router settings and you configured ddclient, you should set as ENDPOINT the third level domain you got from your DDNS service;</li>
+        <li>if you have configured a VPN on VPS that forwards traffic to the the RPI as its client, you should set as ENDPOINT the VPS static public IP address or domain;</li>
+        <li>otherwise set as ENDPOINT the RPI_static_IP, it will work ONLY when clients are connected to LAN.</li>
 </ul>   
 From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/wg_client_manager.sh" target="_blank">wg_client_manager.sh</a> script to your home directory:   
 
@@ -288,7 +288,7 @@ run the script with:
 sudo wg_client_manager.sh
 ```
 To use the VPN connection from your Linux client PC you need to install Wireguard software and copy the VPN client configuration file from /etc/wireguard/clients/ folder of your RPI;    
-to activate the tunnel you can use a lightweight and very straightforward GUI called <a href="https://github.com/UnnoTed/wireguird" target="_blank">Wireguird</a>, or you can use a command line via terminal. 
+to activate the tunnel you can use a lightweight and very straightforward GUI called <a href="https://github.com/UnnoTed/wireguird" target="_blank">Wireguird</a>, but there are also other GUI options, or you can use a command line via terminal.   
 
 
 ### 10. - Implement a manual diagnostic script to check installed services and rules.
@@ -336,6 +336,7 @@ Now you need to reload daemon and enable the new service so it will be automatic
 ```bash
 sudo systemctl daemon-reexec
 sudo systemctl daemon-reload
-sudo systemctl enable --now pi-vpn-watchdog.timer
+sudo systemctl enable pi-vpn-watchdog.timer
+sudo systemctl start pi-vpn-watchdog.timer
 ```
 
