@@ -132,6 +132,7 @@ and if you’re not getting any error messages you can enable unattended-upgrade
 sudo dpkg-reconfigure --priority=low unattended-upgrades
 ```
 
+
 ### 5. – Set SSH access to the RPI using a security key.
 Security key implements strong security standards to SSH access to your RPI and along with failtoban and firewall rules that will be configured later prevent access through brute-force attacks on your RPI SSH port; for this purpose you can also change the default port (22) used by SSH protocol.   
 First you need to generate the security key on your Linux client PC:
@@ -174,6 +175,7 @@ ssh -i /home/client_userID/.ssh/keyname_rsa userID@RPI_static_IP
 ```
 SSH security keys can be also generated from MacOS, Windows and other operating systems, I’ll leave you the pleasure to do a simple web search to get this knowledge.
 
+
 ### 6. – Install Pi Hole.
 The installation process is completely automated and you will be asked only few simple questions to complete the setup and get the Pi Hole working:
 ```bash
@@ -197,6 +199,7 @@ second line sets Pi Hole update at 5:00 AM every 3rd day of the week;
 save the crontab file and exit editor;   
 now you can reboot the RPI and all changes will take effect;   
 you need to set your network clients to use *RPI_static_IP* as DNS address or you can set it as DNS address directly on your router settings so it will be used network-wide.
+
 
 ### 7. – Install and configure NAT and firewall rules, gateway, Wireguard VPN, and DDNS.
 This script will provide the installation of necessary software packages and the configuration of various services like Wireguard VPN server, disable IPv6 traffic for security purposes, sets nftables rules to use the RPI as gateway and hijack hard-coded DNS providers in Smart-TV, sets firewall and failtoban rules and configures ddclient to access your VPN server while your smartphones or laptops are not connected to the LAN if your ISP gives you a dynamic IP address.   
@@ -232,8 +235,9 @@ sudo ./install_services.sh
 ```
 after the script has finished services installaion you need to reboot the RPI.
 
+
 ### 8. - CGNAT and NAT2
-ISP implements security features on the internet line you subscribe for and most common are CGNAT and double NAT or NAT2, that are used when it gives you a dynamic public IP address.    
+ISP implements security features on the internet line you subscribed for and most common are CGNAT and double NAT or NAT2, that are used when it gives you a dynamic public IP address.    
 With those features configured on your internet line you will be unable to access the RPI from the WAN and consequentially you will be also unable to use your Wireguard VPN when you're not connected to LAN.    
 The following shell script will help you to check your internet line and know if you are under CGNAT or NAT2;    
 From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/cgnat_check.sh" target="_blank">cgnat_check.sh</a> script to your home directory: 
@@ -252,21 +256,21 @@ If you want also to check the correct forwarding of VPN/DDNS **udp** port (51234
 In case you're under CGNAT or NAT2 you can check with your ISP the possibility to change from dynamic to static public IP address; this will probably involve some fees.   
 If your ISP configured a NAT2 on your line it probably offers the function of port forwarding through a control panel or upon request.    
 If you are under CGNAT and your ISP can't give you a static public IP address, if you are under NAT2 and your ISP don't allow port forwarding function and if you can't or don't want to change to a different ISP that offers those options, there's a workaround: you can subscribe for an online Linux VPS service; with a web search you can find many offers on the VPS market, and also a lot of scams, so choose your VPS service provider wisely; there are some free solution even from tech colossus like Google and Oracle. Paid services for the specs you'll need will cost you € 1,00 per month.    
-VPS online server will give you a static IP address; you can install wireguard on VPS, with a different subnet from one you have installed on RPI, to act as server and install a client on RPI that will automatically connect to the VPS creating an encrypted tunnel connection; then you can route all traffic from VPS to RPI. In this way you can use your smartphone, tablet or laptop, configured as client of RPI VPN server that you set up in previous chapter, to use the VPS static public IP address to connect to the RPI and activate their VPN tunnel, bypassing CGNAT or NAT2 from your ISP.   
+VPS online server will give you a static IP address; you can install wireguard on VPS, with a different subnet from one you have installed on RPI, to act as server and install a client on RPI that will automatically connect to the VPS creating an encrypted tunnel connection; then you can route all traffic from VPS to RPI. In this way you can use your smartphone, tablet or laptop, configured as client of RPI VPN server that you set up in previous chapter, to use the VPS static public IP address to connect to the RPI and activate their VPN tunnels, bypassing CGNAT or NAT2 from your ISP.   
 
 
-### 9. - Add and remove VPN peers (clients)
-Following shell script will act as client manager giving you the options to:
-<ul>
-        <li>create a new VPN peer looking for first available VPN address, generate access keys and configuration file, display a configuration QR code that can be red from smartphones and tablets using official Wireguard app for Android or iOS;</li>
-        <li>delete an existing peer, access keys and configuration file, typing its name from a displayed list of configured peers.</li>
-</ul>
-You need to set the variables at the beginnig of the script according to your settings;<br>     
+### 9. - Add and remove VPN peer (client)
+This shell script will act as VPN client manager, giving you the options to:
+<ol type="1">
+        <li>create a new VPN peer looking for first available VPN address, generate access keys and configuration file and display a configuration QR code that can be red from smartphones and tablets using official Wireguard app for Android or iOS;</li>
+        <li>delete an existing peer with its access keys and configuration file, typing its name from a displayed list of configured peers.</li>
+</ol>
+You need to set the variables at the beginnig of the script according to your settings:<br>     
 <ul>
         <li>if your internet line has a static public IP address and the VPN UDP port is forwarded by router settings, set as ENDPOINT your static public IP address;</li>
         <li>if your internet line has a dynamic public IP address but its NOT under CGNAT, your ISP allowed VPN UDP port forwarding if its under NAT2, the VPN UDP port is forwarded by router settings and you configured ddclient, you should set as ENDPOINT the third level domain you got from your DDNS service;</li>
         <li>if you have configured a VPN on VPS that forwards traffic to the the RPI as its client, you should set as ENDPOINT the VPS static public IP address or domain;</li>
-        <li>otherwise set as ENDPOINT the RPI_static_IP, it will work ONLY when clients are connected to LAN.</li>
+        <li>otherwise set as ENDPOINT the RPI_static_IP, but it will work ONLY when clients are connected to LAN.</li>
 </ul>   
 From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/wg_client_manager.sh" target="_blank">wg_client_manager.sh</a> script to your home directory:   
 
@@ -288,7 +292,7 @@ run the script with:
 sudo wg_client_manager.sh
 ```
 To use the VPN connection from your Linux client PC you need to install Wireguard software and copy the VPN client configuration file from /etc/wireguard/clients/ folder of your RPI;    
-to activate the tunnel you can use a lightweight and very straightforward GUI called <a href="https://github.com/UnnoTed/wireguird" target="_blank">Wireguird</a>, but there are also other GUI options, or you can use a command line via terminal.   
+to activate the VPN tunnel you can use a lightweight and very straightforward GUI called <a href="https://github.com/UnnoTed/wireguird" target="_blank">Wireguird</a>, but there are also other GUI options, or you can use a command line via terminal.   
 
 
 ### 10. - Implement a manual diagnostic script to check installed services and rules.
@@ -316,7 +320,7 @@ sudo diagnostic.sh
 
 ### 11. - Create a watchdog timer to check VPN server and Pi Hole status.
 Watchdog timer is a useful service that regularly checks the operational status of the VPN server and Pi Hole, and restore it in case of failure.   
-From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/diagnostic.sh" target="_blank">watchdog.sh</a> script, <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/pi-vpn-watchdog.service" target="_blank">pi-vpn-watchdog.service</a> and <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/pi-vpn-watchdog.timer" target="_blank">pi-vpn-watchdog.timer</a> to your home directory: 
+From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/diagnostic.sh" target="_blank">watchdog.sh</a> script, <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/pi-vpn-watchdog.service" target="_blank">pi-vpn-watchdog.service</a> and <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/pi-vpn-watchdog.timer" target="_blank">pi-vpn-watchdog.timer</a> ini files to your home directory: 
 ```bash
 wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/watchdog.sh
 wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/pi-vpn-watchdog.service
@@ -339,4 +343,46 @@ sudo systemctl daemon-reload
 sudo systemctl enable pi-vpn-watchdog.timer
 sudo systemctl start pi-vpn-watchdog.timer
 ```
+
+### 12. - Create a system backup and upload it to cloud storage service.
+This script will perform a backup of all settings you configured following this guide including: unattended-upgrades, SSH access public key, nftables rules, Wireguard (configuration, clients and keys), Pi Hole (configuration and blocklists), watchdog timer, ddclient, rclone and all custom scripts you stored in /usr/local/bin/ folder of your RPI; then will create an encrypted archive and upload it to your favorite cloud storage service using rclone software.   
+As configuration process may differ from one storage service to another, pleae refer to <a href="https://rclone.org/docs/" target="_blank">rclone manual</a> to configure the software and setup your storage service to accept your archive file (you probably need to enable some APIs).   
+You can start the configuration process launching:
+```bash
+rclone config
+```
+After configuration process has finished, if you need to launch it again to change some parameters and previous command gives you errors, execute:
+```bash
+sudo rclone config --config /home/$(logname)/.config/rclone/rclone.conf
+```
+The backup script is fully automated, you just need to set as variable the name of the folder you configured on your cloud storage drive where backup files will be uploaded.    
+During first run you will be asked to set a password to encrypt the backup archives; it will be stored in the system and file permission will be changed so only root will be able to read it; take a note of the password anyway.   
+The script has also a function to delete from your cloud storage backup files older thant 15 days.    
+Copy this command to download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/backup.sh" target="_blank">backup.sh</a> script to your RPI home folder:   
+```bash
+wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/backup.sh
+```
+edit the script with nano and set cloud storage varible according to your settings:
+```bash
+sudo nano backup.sh
+```
+make the script executable and move it to the appropriate directory:
+```bash
+sudo chmod +x backup.sh
+sudo mv backup.sh /usr/local/bin/
+```
+run the script with:
+```bash
+sudo backup.sh
+```
+You can set a cron job to automatically launch the backup once a week:
+open crontab;
+```bash
+sudo crontab -e
+```
+add this line to execute backup process at 4 AM every 6th day of the week (saturday)
+```bash
+0 4 * * 6 /usr/local/bin/backup.sh
+```
+save crontab file and exit editor; reboot the RPI to make changest to crontab effective.    
 
