@@ -151,17 +151,17 @@ install -d -m 700 ~/.ssh
 ```
 now you can add the public key to the created **authorized_keys** file:
 ```bash
-cat /home/userID/keyname_rsa.pub >> ~/.ssh/authorized_keys
+cat /home/$(logname)/keyname_rsa.pub >> ~/.ssh/authorized_keys
 ```
 and then set the correct permission, user and group to the file:
 ```bash
 sudo chmod 644 ~/.ssh/authorized_keys
-sudo chown userID:userID ~/.ssh/authorized_keys
+sudo chown $(logname):$(logname) ~/.ssh/authorized_keys
 ```
 you need to repeat the steps regarding key creation, copy public key to the RPI and add it to authorized_key file procedures from all the PCs and laptops you wish to grant SSH key access to your RPI;   
 you can also remove the public key file:
 ```bash
-rm /home/userID/keyname_rsa.pub
+rm /home/$(logname)/keyname_rsa.pub
 ```
 after all PCs and laptops keys has been added, you need to edit the SSH configuration file to prevent access via password:
 ```bash
@@ -171,7 +171,7 @@ look for the line **PasswordAuthentication**, if is commented with **#** symbol 
 Save file and exit nano editor (CTRL+O, ENTER, CTRL+X).   
 After rebooting the RPI you will need to call the security key to access the RPI via SSH:
 ```bash
-ssh -i /home/client_userID/.ssh/keyname_rsa userID@RPI_static_IP
+ssh -i /home/$(logname)/.ssh/keyname_rsa userID@RPI_static_IP
 ```
 SSH security keys can be also generated from MacOS, Windows and other operating systems, I’ll leave you the pleasure to do a simple web search to get this knowledge.
 
@@ -384,5 +384,23 @@ add this line to execute backup process at 4 AM every 6th day of the week (satur
 ```bash
 0 4 * * 6 /usr/local/bin/backup.sh
 ```
-save crontab file and exit editor; reboot the RPI to make changest to crontab effective.    
+save crontab file and exit editor; reboot the RPI to make changes to crontab effective.    
 
+
+### 13. - Creating a restore script.
+This restore script will help you to restore the configrations you set in previous chapters of this guide. You can choose from a complete system restore to the restore of a single feature, like wireguard configuration or nftables configuration. It will also ask you if you want to restore from a cloud saved backup file, directly with rclone or providing a link to the cloud backup archive, or from a local backup file from home folder of the RPI.    
+In case of a complete restore, that will be necessary if you re-install the Raspberry Pi OS, you just need to expand the file system on the microSD card and set the RPI static IP address with nmtui like explained in first steps of the guide, and restore script will do all the rest, including setting the IP forward, block IPv6 protocol and enable daemon services.    
+After the restoring process is complete it will also ask if you want to restart the RPI to make all changes effective.    
+Copy this command to download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/restire.sh" target="_blank">restore.sh</a> script to your RPI home folder:   
+```bash
+wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/restore.sh
+```
+make the script executable and move it to the appropriate directory:
+```bash
+sudo chmod +x restore.sh
+sudo mv restore.sh /usr/local/bin/
+```
+run the script with:
+```bash
+sudo restore.sh
+```
