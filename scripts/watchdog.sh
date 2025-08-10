@@ -1,4 +1,6 @@
 #!/bin/bash
+# Script by Ale888elA
+# https://github.com/Ale888elA/Pi-Hole-VPN-gateway
 
 WG_INTERFACE="wg0"
 DNS_CHECK="pi.hole"

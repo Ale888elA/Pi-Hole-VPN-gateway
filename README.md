@@ -209,22 +209,14 @@ You need to forward the udc port you will use for your VPN server (51234 in this
 With rules set in nftables and previous configuration of SSH access only with security key, SSH port is already protected from brute-force attacks and is also not exposed to WAN direct access, but can be only reached from LAN or VPN addresses; fail2ban is installed only for auditing/forensic purposes on failed access logs, but will be useful if you will change rule settings on SSH port.   
 For ddclient configuration, you will need some parameters that can be obtained from the control panel of DDNS provider service you subscribed, like protocol used, username, password and third level domain you have chosen.   
 If you have a static public IP you can skip ddclient configuration with CTRL+C.   
-You can check your IP address and active interface name executing this command on the RPI:
-```bash
-ip -brief addr
-```
 From the home directory of RPI (home/userID/) copy the following command and paste it in the terminal; it will download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/install_services.sh" target="_blank">install_services.sh</a> script to your home directory: 
 ```bash
 wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/install_services.sh
 ```
-edit the script with nano:
+if you don't want to use default variables value edit the script with nano:
 ```bash
 sudo nano install_services.sh
 ```
-adjust the variables in the beginning to fit your settings:   
-*eht0* is the variable value if your RPI is cable connected, if you're using Wi-Fi connection should be set to *wlan0*;   
-*wg0* is the virtual device that will be created and used for VPN tunneling and *10.8.0.0/24* is the subnet that will be used by the VPN; *10.8.0.1* will be your VPN gateway address; this values are WireGuard defaults;
-save the file and exit the editor;   
 make the file executable:   
 ```bash
 sudo chmod +x install_services.sh
@@ -302,11 +294,10 @@ From the home directory of RPI (home/userID/) copy the following command and pas
 ```bash
 wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/diagnostic.sh
 ```
-open the script with nano and change the variables in the beginning of the file to match your settings:
+if you did not used default variables value, open the script with nano and change the values in the beginning of the file to match your settings:
 ```bash
 sudo nano diagnostic.sh
 ```
-save the file and exit nano;    
 make the file executable and move it to a more appropriate directory:
 ```bash
 sudo chmod +x diagnostic.sh
@@ -362,10 +353,11 @@ Copy this command to download the <a href="https://github.com/Ale888elA/Pi-Hole-
 ```bash
 wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/backup.sh
 ```
-edit the script with nano and set cloud storage varible according to your settings:
+edit the script with nano and set cloud storage folder name varible according to your settings:
 ```bash
 sudo nano backup.sh
 ```
+save file and exit nano;    
 make the script executable and move it to the appropriate directory:
 ```bash
 sudo chmod +x backup.sh
@@ -380,7 +372,7 @@ open crontab;
 ```bash
 sudo crontab -e
 ```
-add this line to execute backup process at 4 AM every 6th day of the week (saturday)
+add this line to execute backup process at 4 AM every 6th day of the week (saturday):
 ```bash
 0 4 * * 6 /usr/local/bin/backup.sh
 ```
@@ -388,10 +380,11 @@ save crontab file and exit editor; reboot the RPI to make changes to crontab eff
 
 
 ### 13. - Creating a restore script.
-This restore script will help you to restore the configrations you set in previous chapters of this guide. You can choose from a complete system restore to the restore of a single feature, like wireguard configuration or nftables configuration. It will also ask you if you want to restore from a cloud saved backup file, directly with rclone or providing a link to the cloud backup archive, or from a local backup file from home folder of the RPI.    
-In case of a complete restore, that will be necessary if you re-install the Raspberry Pi OS, you just need to expand the file system on the microSD card and set the RPI static IP address with nmtui like explained in first steps of the guide, and restore script will do all the rest, including setting the IP forward, block IPv6 protocol and enable daemon services.    
-After the restoring process is complete it will also ask if you want to restart the RPI to make all changes effective.    
-Copy this command to download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/restire.sh" target="_blank">restore.sh</a> script to your RPI home folder:   
+This restore script will help you to restore the configrations you set in previous chapters of this guide. You can choose from a full system restore to the restore of a single feature, like wireguard configuration or nftables configuration. It will also ask you if you want to restore from a cloud saved backup file, directly with rclone or providing a link to the cloud backup archive, or from a local backup file from home folder of the RPI.    
+If the script will not find the decrypting backup archive password it will automatically start a full restore.    
+In case of a full restore, that will be necessary if you re-install the Raspberry Pi OS, you just need to expand the file system on the microSD card and set the RPI static IP address with nmtui like explained in first steps of the guide, and restore script will do all the rest, including setting the IP forward, block IPv6 protocol, seting SSH acces with your security key, restoring your cron jobs and enable daemon services.    
+After the restoring process is complete it will also ask if you want to clean files in temporary folder used for the process and restart the RPI to make all changes effective.    
+Copy this command to download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/restore.sh" target="_blank">restore.sh</a> script to your RPI home folder:   
 ```bash
 wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/restore.sh
 ```

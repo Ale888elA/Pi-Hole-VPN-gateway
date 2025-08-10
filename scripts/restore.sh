@@ -1,4 +1,7 @@
 #!/bin/bash
+# Script by Ale888elA
+# https://github.com/Ale888elA/Pi-Hole-VPN-gateway
+
 set -e
 
 ############################################
@@ -9,7 +12,7 @@ RCLONE_CONF="/home/$(logname)/.config/rclone/rclone.conf"
 TEMP_DIR="/tmp/rpi_restore"
 
 # Backup sections
-SECTIONS=("unattended-upgrades" "SSH" "nftables" "Pi-hole" "WireGuard" "ddclient" "scripts" "watchdog" "cron jobs" "rclone")
+SECTIONS=("unattended-upgrades" "SSH" "nftables" "Pi-hole" "WireGuard" "ddclient" "scripts" "watchdog" "cron" "rclone")
 
 ############################################
 # FUNCTIONS
@@ -74,39 +77,45 @@ restore_section() {
     echo "♻️ Restoring $section..."
     case "$section" in
         unattended-upgrades)
-            cp -r "$TEMP_DIR/unattended-upgrades"/* "/etc/apt/apt.conf.d/" 2>/dev/null || true
+            mkdir -p "$RESTORE_ROOT/etc/apt/apt.conf.d"
+            cp -r "$TEMP_DIR/unattended-upgrades/"* "$RESTORE_ROOT/etc/apt/apt.conf.d/" 2>/dev/null || true
             ;;
         SSH)
-            mkdir -p "/home/$(logname)/.ssh"
-            cp "$TEMP_DIR/ssh/authorized_keys" "/home/$(logname)/.ssh/" 2>/dev/null || true
+            mkdir -p "$RESTORE_ROOT/home/$(logname)/.ssh"
+            cp "$TEMP_DIR/ssh/authorized_keys" "$RESTORE_ROOT/home/$(logname)/.ssh/" 2>/dev/null || true
             ;;
         nftables)
-            cp "$TEMP_DIR/nftables.conf" "/etc/nftables.conf" 2>/dev/null || true
+            cp "$TEMP_DIR/nftables.conf" "$RESTORE_ROOT/etc/nftables.conf" 2>/dev/null || true
             ;;
         Pi-hole)
-            cp -r "$TEMP_DIR/pihole" "/etc/" 2>/dev/null || true
-            cp -r "$TEMP_DIR/dnsmasq.d" "/etc/" 2>/dev/null || true
+            mkdir -p "$RESTORE_ROOT/etc/pihole"
+            mkdir -p "$RESTORE_ROOT/etc/dnsmasq.d"
+            cp -r "$TEMP_DIR/pihole/"* "$RESTORE_ROOT/etc/pihole/" 2>/dev/null || true
+            cp -r "$TEMP_DIR/dnsmasq.d/"* "$RESTORE_ROOT/etc/dnsmasq.d/" 2>/dev/null || true
             ;;
         WireGuard)
-            cp -r "$TEMP_DIR/wireguard" "/etc/" 2>/dev/null || true
+            mkdir -p "$RESTORE_ROOT/etc/wireguard"
+            cp -r "$TEMP_DIR/wireguard/"* "$RESTORE_ROOT/etc/wireguard/" 2>/dev/null || true
             ;;
         ddclient)
-            cp "$TEMP_DIR/ddclient.conf" "/etc/" 2>/dev/null || true
+            cp "$TEMP_DIR/ddclient.conf" "$RESTORE_ROOT/etc/" 2>/dev/null || true
             ;;
         scripts)
-            cp -r "$TEMP_DIR/usr_local_bin"/* "/usr/local/bin/" 2>/dev/null || true
+            mkdir -p "$RESTORE_ROOT/usr/local/bin"
+            cp -r "$TEMP_DIR/usr_local_bin/"* "$RESTORE_ROOT/usr/local/bin/" 2>/dev/null || true
             ;;
         watchdog)
-            cp "$TEMP_DIR/watchdog.service" "/etc/systemd/system/" 2>/dev/null || true
-            cp "$TEMP_DIR/watchdog.timer" "/etc/systemd/system/" 2>/dev/null || true
+            mkdir -p "$RESTORE_ROOT/etc/systemd/system"
+            cp "$TEMP_DIR/watchdog.service" "$RESTORE_ROOT/etc/systemd/system/" 2>/dev/null || true
+            cp "$TEMP_DIR/watchdog.timer" "$RESTORE_ROOT/etc/systemd/system/" 2>/dev/null || true
             ;;
-        cron\ jobs)
+        cron)
             crontab -u "$(logname)" "$TEMP_DIR/cron/$(logname).cron" 2>/dev/null || true
             crontab -u root "$TEMP_DIR/cron/root.cron" 2>/dev/null || true
             ;;
         rclone)
-            mkdir -p "/home/$(logname)/.config/rclone"
-            cp "$TEMP_DIR/rclone/rclone.conf" "/home/$(logname)/.config/rclone/" 2>/dev/null || true
+            mkdir -p "$RESTORE_ROOT/home/$(logname)/.config/rclone"
+            cp "$TEMP_DIR/rclone/rclone.conf" "$RESTORE_ROOT/home/$(logname)/.config/rclone/" 2>/dev/null || true
             ;;
     esac
 }
@@ -133,41 +142,12 @@ else
     mkdir -p "$TEMP_DIR"
     unzip -P "$PASS" "$BACKUP_FILE" -d "$TEMP_DIR"
     echo "Choose restore option:"
-    echo "1-10 = Single section, 11 = FULL restore"
     select opt in "${SECTIONS[@]}" "FULL_RESTORE"; do
-        if [[ "$REPLY" == "666" ]]; then
+        if [[ "$opt" == "FULL_RESTORE" ]]; then
             install_packages
             for s in "${SECTIONS[@]}"; do restore_section "$s"; done
             enable_ip_forwarding_disable_ipv6
-        fi
-        # === Enable & restart Pi-hole ===
-	    if command -v pihole >/dev/null; then
-    		echo "⚙️  Enabling Pi-hole..."
-    		sudo systemctl enable --now pihole-FTL
-    		sudo pihole restartdns
-	    fi
-
-	    # === Enable & restart WireGuard ===
-	    if command -v wg >/dev/null; then
-    		echo "⚙️  Enabling WireGuard..."
-    		sudo systemctl enable --now wg-quick@wg0
-	    fi
-
-	    # === Enable & restart nftables ===
-	    if command -v nft >/dev/null; then
-    		echo "⚙️  Enabling nftables..."
-    		sudo systemctl enable --now nftables
-	    fi
-
-	    # === Enable & restart watchdog ===
-	    if [[ -f /etc/systemd/system/watchdog.service ]]; then
-    		echo "⚙️  Enabling watchdog..."
-    		sudo systemctl enable --now watchdog.service
-	    fi
-	    
-	    if [[ -f /etc/systemd/system/watchdog.timer ]]; then
-    		sudo systemctl enable --now watchdog.timer
-	    break
+            break
         elif [[ "$REPLY" -ge 1 && "$REPLY" -le ${#SECTIONS[@]} ]]; then
             restore_section "${SECTIONS[$REPLY-1]}"
         else
@@ -176,10 +156,18 @@ else
     done
 fi
 
-#Cleaning temo folder
-read -rp "🔄 Clean temp folder? (y/n): " clean_temp
-[[ "$clean_temp" =~ ^[Yy]$ ]] && sudo rm -r /tmp/rpi_restore/*
+# Riattiva servizi
+[[ -d /etc/pihole ]] && sudo systemctl enable --now pihole-FTL && sudo pihole restartdns
+command -v wg >/dev/null && sudo systemctl enable --now wg-quick@wg0
+command -v nft >/dev/null && sudo systemctl enable --now nftables
+[[ -f /etc/systemd/system/watchdog.service ]] && sudo systemctl enable --now watchdog.service
+[[ -f /etc/systemd/system/watchdog.timer ]] && sudo systemctl enable --now watchdog.timer
+
+#Cleaning temp folder
+read -rp "🗑️ Clean temp folder? (y/n): " clean_temp
+[[ "$clean_temp" =~ ^[Yy]$ ]] && sudo rm -r "$TEMP_DIR"
 
 #Rebooting system
 read -rp "🔄 Reboot system now? (y/n): " reboot_choice
 [[ "$reboot_choice" =~ ^[Yy]$ ]] && sudo reboot
+

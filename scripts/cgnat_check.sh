@@ -1,4 +1,6 @@
 #!/bin/bash
+# Script by Ale888elA
+# https://github.com/Ale888elA/Pi-Hole-VPN-gateway
 
 # Needs root privileges
 [[ $EUID -ne 0 ]] && echo "⚠️ You need root privileges (sudo) to run this script" && exit 1

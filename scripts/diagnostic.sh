@@ -1,11 +1,30 @@
 #!/bin/bash
+# Script by Ale888elA
+# https://github.com/Ale888elA/Pi-Hole-VPN-gateway
 
-# Set static IP address of Raspberry Pi
-RPI_IP="RPI_static_IP"
-# Set interface in use: eth0 or wlan0
-IFACE="eth0"
-# Set udp port used by VPN and DDNS
+############################################
+# VARIABLES TO SET
+############################################
+
+# DONT'T CHANGE TO USE DEFAULT VALUES
+
+# Wireguard VPN UDP port
+# Need to be forwarded in your router configuration to access VPN server from WAN 
 VPN_PORT="51234"
+
+# This values will be autodetected
+# RPI_IP="RPI_static_IP"
+# IFACE="eth0"
+
+############################################
+# AUTO-DETECTED VARIABLES
+############################################
+
+# Raspberry Pi active network interface
+IFACE=$(ip -o -4 addr show up primary scope global | awk '{print $2; exit}')
+
+# Raspberry Pi static IP address (RPI_static_IP)
+RPI_IP=$(ip -4 addr show $IFACE | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
 
 echo "=============================="
 echo "= 🔍  Services diagnosis     ="

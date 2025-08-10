@@ -1,4 +1,7 @@
 #!/bin/bash
+# Script by Ale888elA
+# https://github.com/Ale888elA/Pi-Hole-VPN-gateway
+
 set -e
 
 ############################################

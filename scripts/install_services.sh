@@ -1,15 +1,38 @@
 #!/bin/bash
+# Script by Ale888elA
+# https://github.com/Ale888elA/Pi-Hole-VPN-gateway
 
 set -e
 
-# === VARIABLES TO MODIFY ===
-# you can check the RPI IP and device name (IFACE) with this command
-# ip -brief addr | grep UP
-PIHOLE_IP="RPI_static_IP"
-IFACE="eth0"
+############################################
+# VARIABLES TO SET
+############################################
+
+# DONT'T CHANGE TO USE DEFAULT VALUES
+
+# Wireguard VPN UDP port
+# Need to be forwarded in your router configuration to access VPN server from WAN 
 VPN_PORT="51234"
+
+# Wireguard VPN network virtual interface
 WG_IFACE="wg0"
+
+# Wireguard VPN subnet
 VPN_SUBNET="10.8.0.0/24"
+
+# This values will be autodetected
+# RPI_IP="RPI_static_IP"
+# IFACE="eth0"
+
+############################################
+# AUTO-DETECTED VARIABLES
+############################################
+
+# Raspberry Pi active network interface
+IFACE=$(ip -o -4 addr show up primary scope global | awk '{print $2; exit}')
+
+# Raspberry Pi static IP address (RPI_static_IP)
+RPI_IP=$(ip -4 addr show $IFACE | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
 
 echo "Starting setup Raspberry Pi as gateway/VPN with safe nftables"
 
@@ -97,8 +120,8 @@ table ip nat {
         type nat hook prerouting priority 0;
 
         # DNS hijack toward Pi-hole
-        tcp dport 53 dnat to $PIHOLE_IP
-        udp dport 53 dnat to $PIHOLE_IP
+        tcp dport 53 dnat to $RPI_IP
+        udp dport 53 dnat to $RPI_IP
     }
 
     chain postrouting {
