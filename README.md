@@ -248,7 +248,48 @@ If you want also to check the correct forwarding of VPN/DDNS **udp** port (51234
 In case you're under CGNAT or NAT2 you can check with your ISP the possibility to change from dynamic to static public IP address; this will probably involve some fees.   
 If your ISP configured a NAT2 on your line it probably offers the function of port forwarding through a control panel or upon request.    
 If you are under CGNAT and your ISP can't give you a static public IP address, if you are under NAT2 and your ISP don't allow port forwarding function and if you can't or don't want to change to a different ISP that offers those options, there's a workaround: you can subscribe for an online Linux VPS service; with a web search you can find many offers on the VPS market, and also a lot of scams, so choose your VPS service provider wisely; there are some free solution even from tech colossus like Google and Oracle. Paid services for the specs you'll need will cost you € 1,00 per month.    
-VPS online server will give you a static IP address; you can install wireguard on VPS, with a different subnet from one you have installed on RPI, to act as server and install a client on RPI that will automatically connect to the VPS creating an encrypted tunnel connection; then you can route all traffic from VPS to RPI. In this way you can use your smartphone, tablet or laptop, configured as client of RPI VPN server that you set up in previous chapter, to use the VPS static public IP address to connect to the RPI and activate their VPN tunnels, bypassing CGNAT or NAT2 from your ISP.   
+VPS online server will give you a static IP address; you can install wireguard on VPS, with a different subnet from one you have installed on RPI, to act as server and install a client on RPI that will automatically connect to the VPS creating an encrypted tunnel connection; then you can route all traffic from VPS to RPI. In this way you can use your smartphone, tablet or laptop, configured as client of RPI VPN server that you set up in previous chapter, to use the VPS static public IP address to connect to the RPI and activate their VPN tunnels, bypassing CGNAT or NAT2 from your ISP.    
+Most, if not all, VPS server are configured to accept SSH only with security key given when you open an account, to prevent prute-force attacks. Access your VPS server via SSH and execute this command to check if wget is installed; if sudo command don't work due to VPS configuration, gain root privileges executing command "su", and remove "sudo" part in following commands:
+```bash
+sudo apt update && sudo apt install -y wget
+```
+Download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/VPS_server.sh" target="_blank">VPS_server.sh</a> script; it will install Wireguard software, configure a virtual device called "wg_cgnat" that listen over udp port "51234", configure the VPS server as VPN server and forward traffic to RPI client that will be configured later, configure firewall rules to block all incoming traffic except over udp 51234 port and tcp 22 port (SSH) and configure fail2ban to block SSH access tries with password:
+```bash
+wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/VPS_server.sh
+```
+make the script executable:
+```bash
+sudo chmod +x VPS_server.sh
+```
+and run the scropt with:
+```bash
+sudo ./VPS_server.sh
+```
+once the script finished the installation and configuration process, copy the VPS public key shown to add it to VPS client configuration.    
+Now, log in to your RPI and download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/VPS_client.sh" target="_blank">VPS_client.sh</a> script; it will configure the virtual device "wg_cgnat" and add the configuration to RPI to acr as a client of VPS server and receive forwarded traffic;
+```bash
+wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/VPS_client.sh
+```
+edit the script, add the VPS public key and the VPS static public IP address:
+```bash
+sudo nano VPS_client.sh
+```
+save file, exit editor and make the script executable:
+```bash
+sudo chmod +x VPS_client.sh
+```
+run the scropt with:
+```bash
+sudo ./VPS_client.sh
+```
+when script finished the configuration process, copy RPI public key shown and add it to wg_cgnat.conf file on VPS server.    
+Access VPS server via SSH and edit configuration file:
+```bash
+sudo nano /etc/wireguard/wg_cgnat.conf
+```
+paste RPI public key from RPI client configuration and reboot the VPS server to make changes effective.    
+Now log in agan to RPI and set nftables firewall rule to accept traffic on "wg_cgnat" virtual device:
+
 
 
 ### 9. - Add and remove VPN peer (client)
@@ -382,7 +423,7 @@ save crontab file and exit editor; reboot the RPI to make changes to crontab eff
 ### 13. - Creating a restore script.
 This restore script will help you to restore the configrations you set in previous chapters of this guide. You can choose from a full system restore to the restore of a single feature, like wireguard configuration or nftables configuration. It will also ask you if you want to restore from a cloud saved backup file, directly with rclone or providing a link to the cloud backup archive, or from a local backup file from home folder of the RPI.    
 If the script will not find the decrypting backup archive password it will automatically start a full restore.    
-In case of a full restore, that will be necessary if you re-install the Raspberry Pi OS, you just need to expand the file system on the microSD card and set the RPI static IP address with nmtui like explained in first steps of the guide, and restore script will do all the rest, including setting the IP forward, block IPv6 protocol, seting SSH acces with your security key, restoring your cron jobs and enable daemon services.    
+In case of a full restore, that will be necessary if you re-install the Raspberry Pi OS, you just need to expand the file system on the microSD card and set the RPI static IP address with nmtui like explained in chapters 2 and 3 of the guide, and restore script will do all the rest, including setting the IP forward, block IPv6 protocol, seting SSH acces with your security key, restoring your cron jobs and enable daemon services.    
 After the restoring process is complete it will also ask if you want to clean files in temporary folder used for the process and restart the RPI to make all changes effective.    
 Copy this command to download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/restore.sh" target="_blank">restore.sh</a> script to your RPI home folder:   
 ```bash
