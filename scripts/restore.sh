@@ -12,7 +12,7 @@ RCLONE_CONF="/home/$(logname)/.config/rclone/rclone.conf"
 TEMP_DIR="/tmp/rpi_restore"
 
 # Backup sections
-SECTIONS=("unattended-upgrades" "SSH" "nftables" "Pi-hole" "WireGuard" "ddclient" "scripts" "watchdog" "cron" "rclone")
+SECTIONS=("unattended-upgrades" "SSH" "nftables" "Pi-hole" "WireGuard" "ddclient" "scripts" "watchdog" "cron" "rclone" "fail2ban")
 
 ############################################
 # FUNCTIONS
@@ -20,7 +20,7 @@ SECTIONS=("unattended-upgrades" "SSH" "nftables" "Pi-hole" "WireGuard" "ddclient
 install_packages() {
     echo "📦 Installing required packages..."
     sudo apt update
-    sudo apt install -y zip unzip unattended-upgrades bsd-mailx nftables wireguard ddclient qrencode rclone curl wget
+    sudo apt install -y zip unzip unattended-upgrades bsd-mailx fail2ban nftables wireguard ddclient qrencode rclone curl wget
     curl -sSL https://install.pi-hole.net | bash
 }
 
@@ -77,45 +77,44 @@ restore_section() {
     echo "♻️ Restoring $section..."
     case "$section" in
         unattended-upgrades)
-            mkdir -p "$RESTORE_ROOT/etc/apt/apt.conf.d"
-            cp -r "$TEMP_DIR/unattended-upgrades/"* "$RESTORE_ROOT/etc/apt/apt.conf.d/" 2>/dev/null || true
+            cp -r "$TEMP_DIR/unattended-upgrades/"* "/etc/apt/apt.conf.d/" 2>/dev/null || true
             ;;
         SSH)
-            mkdir -p "$RESTORE_ROOT/home/$(logname)/.ssh"
-            cp "$TEMP_DIR/ssh/authorized_keys" "$RESTORE_ROOT/home/$(logname)/.ssh/" 2>/dev/null || true
+            cp "$TEMP_DIR/ssh/authorized_keys" "/home/$(logname)/.ssh/" 2>/dev/null || true
+            cp "$TEMP_DIR/ssh/sshd_config" "/etc/ssh/" 2>/dev/null || true
             ;;
         nftables)
-            cp "$TEMP_DIR/nftables.conf" "$RESTORE_ROOT/etc/nftables.conf" 2>/dev/null || true
+            cp "$TEMP_DIR/nftables.conf" "/etc/nftables.conf" 2>/dev/null || true
             ;;
         Pi-hole)
-            mkdir -p "$RESTORE_ROOT/etc/pihole"
-            mkdir -p "$RESTORE_ROOT/etc/dnsmasq.d"
-            cp -r "$TEMP_DIR/pihole/"* "$RESTORE_ROOT/etc/pihole/" 2>/dev/null || true
-            cp -r "$TEMP_DIR/dnsmasq.d/"* "$RESTORE_ROOT/etc/dnsmasq.d/" 2>/dev/null || true
+            mkdir -p "/etc/pihole"
+            mkdir -p "/etc/dnsmasq.d"
+            cp -r "$TEMP_DIR/pihole/"* "/etc/pihole/" 2>/dev/null || true
+            cp -r "$TEMP_DIR/dnsmasq.d/"* "/etc/dnsmasq.d/" 2>/dev/null || true
             ;;
         WireGuard)
-            mkdir -p "$RESTORE_ROOT/etc/wireguard"
-            cp -r "$TEMP_DIR/wireguard/"* "$RESTORE_ROOT/etc/wireguard/" 2>/dev/null || true
+            cp -r "$TEMP_DIR/wireguard/"* "/etc/wireguard/" 2>/dev/null || true
             ;;
         ddclient)
-            cp "$TEMP_DIR/ddclient.conf" "$RESTORE_ROOT/etc/" 2>/dev/null || true
+            cp "$TEMP_DIR/ddclient.conf" "/etc/" 2>/dev/null || true
             ;;
         scripts)
-            mkdir -p "$RESTORE_ROOT/usr/local/bin"
-            cp -r "$TEMP_DIR/usr_local_bin/"* "$RESTORE_ROOT/usr/local/bin/" 2>/dev/null || true
+            cp -r "$TEMP_DIR/usr_local_bin/"* "/usr/local/bin/" 2>/dev/null || true
             ;;
         watchdog)
-            mkdir -p "$RESTORE_ROOT/etc/systemd/system"
-            cp "$TEMP_DIR/watchdog.service" "$RESTORE_ROOT/etc/systemd/system/" 2>/dev/null || true
-            cp "$TEMP_DIR/watchdog.timer" "$RESTORE_ROOT/etc/systemd/system/" 2>/dev/null || true
+            cp "$TEMP_DIR/watchdog.service" "/etc/systemd/system/" 2>/dev/null || true
+            cp "$TEMP_DIR/watchdog.timer" "/etc/systemd/system/" 2>/dev/null || true
             ;;
         cron)
             crontab -u "$(logname)" "$TEMP_DIR/cron/$(logname).cron" 2>/dev/null || true
             crontab -u root "$TEMP_DIR/cron/root.cron" 2>/dev/null || true
             ;;
         rclone)
-            mkdir -p "$RESTORE_ROOT/home/$(logname)/.config/rclone"
-            cp "$TEMP_DIR/rclone/rclone.conf" "$RESTORE_ROOT/home/$(logname)/.config/rclone/" 2>/dev/null || true
+            mkdir -p "/home/$(logname)/.config/rclone"
+            cp "$TEMP_DIR/rclone/rclone.conf" "/home/$(logname)/.config/rclone/" 2>/dev/null || true
+            ;;
+        fail2ban)
+            cp -r "$TEMP_DIR/fail2ban/"* "/etc/fail2ban/" 2>/dev/null || true
             ;;
     esac
 }
@@ -162,6 +161,12 @@ command -v wg >/dev/null && sudo systemctl enable --now wg-quick@wg0
 command -v nft >/dev/null && sudo systemctl enable --now nftables
 [[ -f /etc/systemd/system/watchdog.service ]] && sudo systemctl enable --now watchdog.service
 [[ -f /etc/systemd/system/watchdog.timer ]] && sudo systemctl enable --now watchdog.timer
+# === Enable & restart fail2ban ===
+if command -v fail2ban-server >/dev/null; then
+    echo "⚙️  Enabling fail2ban..."
+    sudo systemctl enable --now fail2ban
+fi
+
 
 #Cleaning temp folder
 read -rp "🗑️ Clean temp folder? (y/n): " clean_temp

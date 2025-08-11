@@ -79,6 +79,7 @@ fi
 # 4. SSH authorized keys
 mkdir -p "$TEMP_DIR/ssh"
 cp "/home/$(logname)/.ssh/authorized_keys" "$TEMP_DIR/ssh/"
+cp "/etc/ssh/sshd_config"  "$TEMP_DIR/ssh/"
 
 # 5. Scripts in /usr/local/bin
 mkdir -p "$TEMP_DIR/usr_local_bin"
@@ -113,6 +114,12 @@ fi
 if [[ -f "$RCLONE_CONF" ]]; then
     mkdir -p "$TEMP_DIR/rclone"
     cp "$RCLONE_CONF" "$TEMP_DIR/rclone/"
+fi
+
+# 11. fail2ban configuration
+if [[ -d /etc/fail2ban ]]; then
+    mkdir -p "$TEMP_DIR/fail2ban"
+    cp -r /etc/fail2ban/* "$TEMP_DIR/fail2ban/"
 fi
 
 ############################################
