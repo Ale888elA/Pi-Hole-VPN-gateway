@@ -64,14 +64,14 @@ iptables -A INPUT -i lo -j ACCEPT
 # Already estabilished connections
 iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
-# Logging login tries over UDP 50888 port
+# Logging login tries over UDP 51234 port
 # To check logs use:
 # journalctl -xe | grep "WG-ATTEMPT"
 # or
 # grep "WG-ATTEMPT" /var/log/syslog
 iptables -A INPUT -p udp --dport $WG_PORT -j LOG --log-prefix "WG-ATTEMPT: " --log-level 4
 
-# WireGuard UDP 50888
+# WireGuard UDP 51234
 iptables -A INPUT -p udp --dport $WG_PORT -j ACCEPT
 
 # SSH TCP 22 (open, but with security key autentication)

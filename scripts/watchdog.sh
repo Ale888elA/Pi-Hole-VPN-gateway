@@ -16,3 +16,10 @@ if ! dig @$DNS_CHECK | grep -q "ANSWER SECTION"; then
     echo "Pi-hole is non respondig. Restart DNS and Pi-hole..."
     systemctl restart pihole-FTL
 fi
+
+# Check VPS WireGuard clientt handshake
+# Uncomment next 4 lines if you set the cgnat bypass with VPS server
+#if ! sudo wg show wg_cgnat | grep -q "latest handshake"; then
+#    echo "WireGuard VPS client inactive. Restart..."
+#    systemctl restart wg-quick@$wg_cgnat
+#fi

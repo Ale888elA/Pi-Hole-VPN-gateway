@@ -45,4 +45,3 @@ systemctl start wg-quick@$WG_IFACE
 echo "✅ Raspberry configured as WireGuard client of VPS server."
 echo "🔑 Raspberry public key to add to server config file:"
 cat rpi_public.key
-

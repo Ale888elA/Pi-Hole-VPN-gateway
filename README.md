@@ -6,7 +6,8 @@ This guide is suited for the security exigences of a home network and for privat
 <ul>
         <li>install and configure on the <a href="https://www.raspberrypi.com/" target="_blank">Raspberry PI</a> (RPI) a <a href="https://en.wikipedia.org/wiki/Virtual_private_network" target="_blank">VPN</a> server using <a href="https://www.wireguard.com/" target="_blank">Wireguard</a> protocol;</li>
         <li>install and configure on the RPI a network-wide <a href="https://en.wikipedia.org/wiki/Domain_Name_System" target="_blank">DNS</a> sinkhole for blocking ads, tracking, scam, malware and phishing known referrals using <a href="https://pi-hole.net/" target="_blank">Pi Hole</a>;</li>
-        <li>configure the RPI to be used as gateway, to block <a href="https://en.wikipedia.org/wiki/IPv6" target="_blank">IPv6</a> traffic for security purposes and hijack hard-coded DNS providers on Smart-TVs.</li>
+        <li>configure the RPI to be used as gateway, to block <a href="https://en.wikipedia.org/wiki/IPv6" target="_blank">IPv6</a> traffic for security purposes and hijack hard-coded DNS providers on Smart-TVs;</li>
+        <li>cover every aspects of RPI environment program-wise, from updates to backup and automated checks of running instances, so once you finished programming you can forget to check if its working.</li>
 </ul>
 
 
@@ -266,7 +267,7 @@ and run the scropt with:
 sudo ./VPS_server.sh
 ```
 once the script finished the installation and configuration process, copy the VPS public key shown to add it to VPS client configuration.    
-Now, log in to your RPI and download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/VPS_client.sh" target="_blank">VPS_client.sh</a> script; it will configure the virtual device "wg_cgnat" and add the configuration to RPI to acr as a client of VPS server and receive forwarded traffic;
+Now, log in to your RPI and download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/VPS_client.sh" target="_blank">VPS_client.sh</a> script; it will configure the virtual device "wg_cgnat" and add the configuration to RPI to act as a client of VPS server and receive forwarded traffic;
 ```bash
 wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/VPS_client.sh
 ```
@@ -288,8 +289,23 @@ Access VPS server via SSH and edit configuration file:
 sudo nano /etc/wireguard/wg_cgnat.conf
 ```
 paste RPI public key from RPI client configuration and reboot the VPS server to make changes effective.    
-Now log in agan to RPI and set nftables firewall rule to accept traffic on "wg_cgnat" virtual device:
-
+Back to tour RPI edit nftables configuration file:
+```bash
+sudo nano /etc/nftables.conf
+```
+look for this section of the script:     
+>table inet filter {
+>    chain input {
+>        type filter hook input priority 0;
+>        policy drop;
+>
+>        iif "lo" accept
+>        ct state established,related accept     
+and add following rule after the lines above to accept connection coming from your VPS server:
+```bash
+iif "wg_cgnat" ip saddr 10.100.100.1 accept
+```
+Save file, exit editor and restart the RPI to make all changes effective.
 
 
 ### 9. - Add and remove VPN peer (client)
