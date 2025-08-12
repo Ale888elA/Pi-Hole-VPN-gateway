@@ -293,14 +293,16 @@ Back to tour RPI edit nftables configuration file:
 ```bash
 sudo nano /etc/nftables.conf
 ```
-look for this section of the script:     
->table inet filter {
->    chain input {
->        type filter hook input priority 0;
->        policy drop;
->
->        iif "lo" accept
+look for this section of the script:   
+
+> table inet filter {    
+>    chain input {    
+>        type filter hook input priority 0;    
+>        policy drop;    
+>    
+>        iif "lo" accept    
 >        ct state established,related accept     
+
 and add following rule after the lines above to accept connection coming from your VPS server:
 ```bash
 iif "wg_cgnat" ip saddr 10.100.100.1 accept
