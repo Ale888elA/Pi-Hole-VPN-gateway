@@ -17,6 +17,7 @@ This guide is suited for the security exigences of a home network and for privat
         <li>configure the RPI to refuse <a href="https://en.wikipedia.org/wiki/Secure_Shell" target="_blank">SSH</a> password access and use instead a security key;</li>
         <li>setup <a href="https://en.wikipedia.org/wiki/Network_address_translation" target="_blank">NAT</a> and firewall rules for security purposes and preventing <a href="https://en.wikipedia.org/wiki/DNS_over_TLS" target="_blank">DoT</a> and <a href="https://en.wikipedia.org/wiki/DNS_over_HTTPS" target="_blank">DoH</a> queries;</li>
         <li>configure a <a href="https://en.wikipedia.org/wiki/Dynamic_DNS" target="_blank">DDNS</a> service to access the VPN server through the dynamic public IP address given by your <a href="https://en.wikipedia.org/wiki/Internet_service_provider" target="_blank">ISP</a> from smartphones, tablets and laptops while are not connected to the <a href="https://en.wikipedia.org/wiki/Local_area_network" target="_blank">LAN</a>;</li>        
+        <li>configure a <a href="https://en.wikipedia.org/wiki/Virtual_private_server" target="_blank">VPS</a> service to bypass <a href="https://en.wikipedia.org/wiki/Carrier-grade_NAT" target="_blank">CGNAT</a> or NAT2 to access your RPI VPN server when your smartphones, tablets and laptops are not connected to the LAN;</li>
         <li>implement a diagnostic script that checks that services intalled on RPI are working propely;</li>
         <li>implement a <a href="https://en.wikipedia.org/wiki/Watchdog_timer" target="_blank">watchdog timer</a> that regularly checks VPN server and Pi Hole status;</li>
         <li>implement a script to automate the creation and purge of VPN clients, their relative access keys and and configuration files,that also shows a configuration QR code for smartphones and tablets;</li>
@@ -376,7 +377,8 @@ wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/watchdog.
 wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/pi-vpn-watchdog.service
 wget https://github.com/Ale888elA/Pi-Hole-VPN-gateway/raw/main/scripts/pi-vpn-watchdog.timer
 ```   
-make the script watchdog.sh executable and move it to the appropriate directory:
+In case you installed the VPS CGNAT bypass, edit the script and uncomment last 4 lines, it will also check virtual device "wg_cgnat".    
+Make the script watchdog.sh executable and move it to the appropriate directory:
 ```bash
 sudo chmod +x watchdog.sh
 sudo mv watchdog.sh /usr/local/bin/
@@ -395,7 +397,7 @@ sudo systemctl start pi-vpn-watchdog.timer
 ```
 
 ### 12. - Create a system backup and upload it to cloud storage service.
-This script will perform a backup of all settings you configured following this guide including: unattended-upgrades, SSH access public key, nftables rules, Wireguard (configuration, clients and keys), Pi Hole (configuration and blocklists), watchdog timer, ddclient, rclone and all custom scripts you stored in /usr/local/bin/ folder of your RPI; then will create an encrypted archive and upload it to your favorite cloud storage service using rclone software.   
+This script will perform a backup of all settings you configured following this guide including: unattended-upgrades, SSH access public key, nftables rules, fail2ban, Wireguard (configuration, clients and keys), Pi Hole (configuration and blocklists), watchdog timer, ddclient, rclone and all custom scripts you stored in /usr/local/bin/ folder of your RPI; then will create an encrypted archive and upload it to your favorite cloud storage service using rclone software.   
 As configuration process may differ from one storage service to another, pleae refer to <a href="https://rclone.org/docs/" target="_blank">rclone manual</a> to configure the software and setup your storage service to accept your archive file (you probably need to enable some APIs).   
 You can start the configuration process launching:
 ```bash

@@ -106,6 +106,7 @@ fi
 # 10. WIREGUARD
 echo -e "\n[10] WIREGUARD service status:"
 systemctl is-active wg-quick@wg0 &>/dev/null && echo "✅ Active" || echo "❌ NOT active"
+systemctl is-active wg-quick@wg_cgnat &>/dev/null && echo "✅ Active" || echo "❌ NOT active or installed"
 
 # 11. Wireguard/DDNS udp port check
 echo -e "\n[11] Check UDP $VPN_PORT port (WireGuard/DDNS):"
