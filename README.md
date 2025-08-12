@@ -299,7 +299,6 @@ look for this section of the script:
 >    chain input {    
 >        type filter hook input priority 0;    
 >        policy drop;    
->    
 >        iif "lo" accept    
 >        ct state established,related accept     
 
