@@ -343,8 +343,9 @@ run the script with:
 ```bash
 sudo wg_client_manager.sh
 ```
-To use the VPN connection from your Linux client PC you need to install Wireguard software and copy the VPN client configuration file from /etc/wireguard/clients/ folder of your RPI;    
-to activate the VPN tunnel you can use a lightweight and very straightforward GUI called <a href="https://github.com/UnnoTed/wireguird" target="_blank">Wireguird</a>, but there are also other GUI options, or you can use a command line via terminal.   
+To use the VPN connection from your Linux client PC you need to install Wireguard software (wireguard-tools) and copy the VPN client configuration file from /etc/wireguard/clients/ folder of your RPI; is advised that you have also a resolver (openresolv or systemdresolved) installed on your system.    
+Various linux connection managers, like systemd-networkd, netctl, NetworkManager and ConnMan, supports wireguard protocol, so you can refer to their user manuals about how to import the configuration file or manually setup the VPN tunnel with data included in the file.    
+In case that your linux connection manager does not support wireguard protocol you can use a lightweight and very straightforward GUI called <a href="https://github.com/UnnoTed/wireguird" target="_blank">Wireguird</a> to activate your VPN tunnel, but there are also other GUI options, or use a command line and even setup a systemd service so your tunnel will be activated at boot.    
 
 
 ### 10. - Implement a manual diagnostic script to check installed services and rules.
