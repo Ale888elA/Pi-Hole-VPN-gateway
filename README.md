@@ -344,7 +344,18 @@ run the script with:
 sudo wg_client_manager.sh
 ```
 To use the VPN connection from your Linux client PC you need to install Wireguard software (wireguard-tools) and copy the VPN client configuration file from /etc/wireguard/clients/ folder of your RPI; is advised that you have also a resolver (openresolv or systemdresolved) installed on your system.    
-Various linux connection managers, like systemd-networkd, netctl, NetworkManager and ConnMan, supports wireguard protocol, so you can refer to their user manuals about how to import the configuration file or manually setup the VPN tunnel with data included in the file.    
+Various linux connection managers, like systemd-networkd, netctl, NetworkManager and ConnMan, supports wireguard protocol, so you can refer to their user manuals about how to import the configuration file or manually setup the VPN tunnel with data included in the file; you will need to set these parameters:    
+<ul>
+<li>virtual interface name - corresponds to name you set for the VPN cilent, and name given to configuration file;</li>
+<li>client private key - included in configuration file;</li>
+<li>nodes / VPN server public key - included in configuration file;</li>
+<li>nodes / allowed IPs - included in configuration file;</li>
+<li>VPN endpoint and listening port - included in configuration file;</li>
+<li>VPN client IP address - assigned during client creation (i.g.: 10.8.0.X);</li>
+<li>VPN netmask - 24 (255.255.255.0);</li>
+<li>VPN gateway IP address - 10.8.0.1;</li>
+<li>DNS server IP address - RPI static IP address (i.g.: 192.168.XXX.XXX);</li>
+</ul>
 In case that your linux connection manager does not support wireguard protocol you can use a lightweight and very straightforward GUI called <a href="https://github.com/UnnoTed/wireguird" target="_blank">Wireguird</a> to activate your VPN tunnel, but there are also other GUI options, or use a command line and even setup a systemd service so your tunnel will be activated at boot.    
 
 
@@ -441,10 +452,10 @@ add this line to execute backup process at 4 AM every 6th day of the week (satur
 save crontab file and exit editor; reboot the RPI to make changes to crontab effective.    
 
 
-### 13. - Creating a restore script.
-This restore script will help you to restore the configrations you set in previous chapters of this guide. You can choose from a full system restore to the restore of a single feature, like wireguard configuration or nftables configuration. It will also ask you if you want to restore from a cloud saved backup file, directly with rclone or providing a link to the cloud backup archive, or from a local backup file from home folder of the RPI.    
+### 13. - Create a script for system restore from a backup archive.
+This restore script will help you to restore the configrations you set in previous chapters of this guide. You can choose from a full system restore to the restore of a single feature, like wireguard configuration or nftables configuration. It will also ask you if you want to restore from a cloud saved backup file directly with rclone or providing a link to the cloud backup archive, or from a local backup file from home folder of the RPI.    
 If the script will not find the decrypting backup archive password it will automatically start a full restore.    
-In case of a full restore, that will be necessary if you re-install the Raspberry Pi OS, you just need to expand the file system on the microSD card and set the RPI static IP address with nmtui like explained in chapters 2 and 3 of the guide, and restore script will do all the rest, including setting the IP forward, block IPv6 protocol, seting SSH acces with your security key, restoring your cron jobs and enable daemon services.    
+In case of a full restore, that will be necessary if you re-install the Raspberry Pi OS, you just need to expand the file system on the microSD card and set the RPI static IP address with nmtui command like explained in chapters 2 and 3 of the guide, and restore script will do all the rest, including setting the IP forward, block IPv6 protocol, seting SSH acces with your security key, restoring your cron jobs and enable daemon services.    
 After the restoring process is complete it will also ask if you want to clean files in temporary folder used for the process and restart the RPI to make all changes effective.    
 Copy this command to download the <a href="https://github.com/Ale888elA/Pi-Hole-VPN-gateway/blob/main/scripts/restore.sh" target="_blank">restore.sh</a> script to your RPI home folder:   
 ```bash
